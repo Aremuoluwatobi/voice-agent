@@ -149,8 +149,8 @@ async def my_agent(ctx: JobContext):
                 noise_cancellation=ai_coustics.audio_enhancement(
                     model=ai_coustics.EnhancerModel.QUAIL_VF_S
                 ),
-                delete_room_on_close=True,
             ),
+            delete_room_on_close=True,
         ),
     )
 
