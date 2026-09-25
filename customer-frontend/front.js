@@ -5,6 +5,10 @@ const callTimerEl = document.getElementById('callTimer');
 
 let timerInterval = null;
 let callStartTime = null;
+let room = null; // holds the active LiveKit Room instance for this call
+
+// Adjust this to your real deployed FastAPI backend URL and route name.
+const FASTAPI_TOKEN_URL = 'https://your-backend.onrender.com/api/token';
 
 function setCallState(state) {
     callWidget.dataset.callState = state; // "idle" | "connecting" | "active"
@@ -29,15 +33,46 @@ function updateTimerDisplay() {
     callTimerEl.textContent = `${minutes}:${seconds}`;
 }
 
-// TODO: replace with the real call: fetch a token from
-// POST /api/token on the FastAPI backend, then join the LiveKit room.
+// Custom error type so handleStartCall's catch block can tell a "call already
+// active" response apart from any other failure, and show the right message.
+class CallBusyError extends Error { }
+
+// Asks FastAPI to check-and-lock, then joins the real LiveKit room.
+// Throws on any failure; does not touch call state itself, that's
+// handleStartCall's job.
 async function connectToCall() {
-    await new Promise((resolve) => setTimeout(resolve, 1500)); // placeholder delay
+    const response = await fetch(FASTAPI_TOKEN_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (response.status === 409) {
+        // Adjust this status code if your backend signals "already active"
+        // differently.
+        throw new CallBusyError('A call is already active.');
+    }
+
+    if (!response.ok) {
+        throw new Error(`Token request failed with status ${response.status}`);
+    }
+
+    const data = await response.json();
+    const { token, livekit_url: livekitUrl } = data;
+    // Adjust the field names above if your FastAPI route returns different
+    // JSON keys.
+
+    const { Room } = await import('livekit-client');
+    room = new Room();
+    await room.connect(livekitUrl, token);
 }
 
-// TODO: replace with real LiveKit room.disconnect()
+// Disconnects from the LiveKit room, which is also what triggers the
+// agent's shutdown callback on the backend to clear the Redis lock.
 async function disconnectFromCall() {
-    // nothing to do yet
+    if (room) {
+        await room.disconnect();
+        room = null;
+    }
 }
 
 async function handleStartCall() {
@@ -49,7 +84,11 @@ async function handleStartCall() {
     } catch (err) {
         console.error('Failed to connect call:', err);
         setCallState('idle');
-        alert('Could not connect. Please try again.');
+        if (err instanceof CallBusyError) {
+            alert('A call is already in progress. Please try again shortly.');
+        } else {
+            alert('Could not connect. Please try again.');
+        }
     }
 }
 

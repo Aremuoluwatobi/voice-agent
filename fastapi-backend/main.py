@@ -34,15 +34,13 @@ def check_health():
 @app.post("/api/token")
 async def create_token():
 
-    CALL_LOCK_KEY = "call_active"
-    LOCK_TIMEOUT_SECONDS = 180
     user_id = f"customer-{uuid.uuid4().hex[:8]}"
 
     # lock room if empty
     locked = await redis.set(CALL_LOCK_KEY, user_id, ex=LOCK_TIMEOUT_SECONDS, nx=True)
     if not locked:
         raise HTTPException(
-            status_code=400, detail="Line busy, please Try again later")
+            status_code=409, detail="Line busy, please Try again later")
 
     try:
         room_name = f"call-{uuid.uuid4().hex[:8]}"
