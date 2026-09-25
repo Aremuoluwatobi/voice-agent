@@ -23,7 +23,7 @@ app.add_middleware(
 
 
 CALL_LOCK_KEY = "call_active"
-LOCK_TIMEOUT_SECONDS = 160
+LOCK_TIMEOUT_SECONDS = 60
 
 
 @app.get("/health")
