@@ -14,7 +14,7 @@ from livekit.agents import (
     room_io,
 )
 from livekit.plugins import ai_coustics
-from agent_config import redis
+from .agent_config import redis
 
 logger = logging.getLogger("agent")
 
