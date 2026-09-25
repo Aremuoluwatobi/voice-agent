@@ -61,7 +61,7 @@ async function connectToCall() {
     // Adjust the field names above if your FastAPI route returns different
     // JSON keys.
 
-    const { Room } = await import('livekit-client');
+    const { Room } = LivekitClient;
     room = new Room();
     await room.connect(livekitUrl, token);
 }
