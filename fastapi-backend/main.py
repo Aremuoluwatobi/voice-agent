@@ -16,7 +16,7 @@ logger = get_logger(__name__)
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://shopdarret.vercel.app/"],
+    allow_origins=["https://shopdarret.vercel.app"],
     allow_methods=["*"],
     allow_headers=["*"]
 )
