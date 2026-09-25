@@ -8,7 +8,7 @@ let callStartTime = null;
 let room = null; // holds the active LiveKit Room instance for this call
 
 // Adjust this to your real deployed FastAPI backend URL and route name.
-const FASTAPI_TOKEN_URL = 'https://your-backend.onrender.com/api/token';
+const FASTAPI_TOKEN_URL = 'https://shopdarret.onrender.com/api/token';
 
 function setCallState(state) {
     callWidget.dataset.callState = state; // "idle" | "connecting" | "active"
