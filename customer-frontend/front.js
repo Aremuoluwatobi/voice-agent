@@ -63,6 +63,7 @@ async function connectToCall() {
 
     const { Room } = LivekitClient;
     room = new Room();
+    console.log('token:', token, 'livekitUrl:', livekitUrl);
     await room.connect(livekitUrl, token);
 }
 
