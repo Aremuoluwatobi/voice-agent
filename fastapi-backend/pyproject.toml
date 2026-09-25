@@ -1,0 +1,9 @@
+[project]
+name = "fastapi-backend"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi[standard]>=0.141.1",
+    "livekit-api>=1.2.1",
+    "upstash-redis>=1.8.0",
+]
