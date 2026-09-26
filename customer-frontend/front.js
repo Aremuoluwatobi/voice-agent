@@ -57,7 +57,7 @@ async function connectToCall() {
     }
 
     const data = await response.json();
-    const { token, livekit_url: livekitUrl } = data;
+    const { token, LIVEKIT_URL: livekitUrl } = data;
     // Adjust the field names above if your FastAPI route returns different
     // JSON keys.
 
