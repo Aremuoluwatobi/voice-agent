@@ -37,6 +37,16 @@ function updateTimerDisplay() {
 // active" response apart from any other failure, and show the right message.
 class CallBusyError extends Error { }
 
+function setupAudioPlayback(room) {
+    room.on(LivekitClient.RoomEvent.TrackSubscribed, (track) => {
+        if (track.kind === 'audio') {
+            const audioElement = track.attach();
+            audioElement.setAttribute('data-livekit', 'true');
+            document.body.appendChild(audioElement);
+        }
+    });
+}
+
 // Asks FastAPI to check-and-lock, then joins the real LiveKit room.
 // Throws on any failure; does not touch call state itself, that's
 // handleStartCall's job.
@@ -65,6 +75,13 @@ async function connectToCall() {
     room = new Room();
     console.log('token:', token, 'livekitUrl:', livekitUrl);
     await room.connect(livekitUrl, token);
+    await room.localParticipant.setMicrophoneEnabled(true);
+
+    room = new Room();
+    setupAudioPlayback(room);
+    console.log('token:', token, 'livekitUrl:', livekitUrl);
+    await room.connect(livekitUrl, token);
+    await room.localParticipant.setMicrophoneEnabled(true);
 }
 
 // Disconnects from the LiveKit room, which is also what triggers the
@@ -72,6 +89,7 @@ async function connectToCall() {
 async function disconnectFromCall() {
     if (room) {
         await room.disconnect();
+        document.querySelectorAll('audio[data-livekit]').forEach((el) => el.remove());
         room = null;
     }
 }
