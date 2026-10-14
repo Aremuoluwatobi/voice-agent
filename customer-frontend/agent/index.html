@@ -1,1 +1,107 @@
-<h1>AGENT LOGIN</h1>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>shopdarret | Agent</title>
+    <link rel="stylesheet" href="/agent/style.css">
+</head>
+
+<body>
+
+    <!-- ===== TOP BAR (shared by waiting + call views, hidden on login) ===== -->
+    <header id="top-bar" class="top-bar" hidden>
+        <div class="brand">
+            <img src="/agent/icons/PLACEHOLDER_LOGO_BAG.svg" alt="" class="brand-icon">
+            <span class="brand-name">shopdarret</span>
+        </div>
+        <div class="top-bar-right">
+            <span id="agent-status" class="status">Online</span>
+            <span id="agent-name" class="agent-name">PLACEHOLDER_AGENT_NAME</span>
+        </div>
+    </header>
+
+    <main>
+
+        <!-- ===== VIEW 1: LOGIN ===== -->
+        <section id="view-login" class="view view-login">
+
+            <!-- Left side: brand + intro -->
+            <div class="login-intro">
+                <div class="brand">
+                    <img src="/agent/icons/PLACEHOLDER_LOGO_BAG.svg" alt="" class="brand-icon">
+                    <span class="brand-name">shopdarret</span>
+                </div>
+
+                <h1 class="login-title">Human Agent Sign In</h1>
+                <p class="login-subtitle">
+                    Access your support dashboard to help customers and resolve issues.
+                </p>
+
+                <img src="/agent/icons/PLACEHOLDER_HEADPHONES.svg" alt="" class="login-illustration">
+            </div>
+
+            <!-- Right side: login card -->
+            <div class="login-card">
+                <h2 class="card-title">Welcome back,</h2>
+                <p class="card-subtitle">Sign in to continue</p>
+
+                <form id="login-form" class="login-form">
+
+                    <!-- Email -->
+                    <label for="login-email" class="field-label">Email address</label>
+                    <div class="input-wrap">
+                        <img src="/agent/icons/PLACEHOLDER_MAIL.svg" alt="" class="input-icon">
+                        <input id="login-email" name="email" type="email" value="shopdarret@gmail.com"
+                            autocomplete="username" required>
+                    </div>
+
+                    <!-- Password -->
+                    <label for="login-password" class="field-label">Password</label>
+                    <div class="input-wrap">
+                        <img src="/agent/icons/PLACEHOLDER_LOCK.svg" alt="" class="input-icon">
+                        <input id="login-password" name="password" type="password" value="shopdarretagent_01"
+                            autocomplete="current-password" required>
+                        <button id="toggle-password" type="button" class="toggle-password" aria-label="Show password"
+                            aria-controls="login-password">
+                            <img id="toggle-password-icon" src="/agent/icons/PLACEHOLDER_EYE.svg" alt="">
+                        </button>
+                    </div>
+
+                    <!-- Sign in -->
+                    <button id="login-submit" type="submit" class="btn-primary">
+                        Sign in
+                        <img src="/agent/icons/PLACEHOLDER_ARROW_RIGHT.svg" alt="" class="btn-icon">
+                    </button>
+
+                    <!-- Message area: "Signing in…", errors, "Server is waking up" -->
+                    <p id="login-message" class="login-message" role="status" aria-live="polite"></p>
+                </form>
+
+                <p class="help-text">
+                    <a href="mailto:aremutaiwotobi@gmail.com?subject=Agent%20login%20help">Need help? Contact
+                        support</a>
+                </p>
+            </div>
+        </section>
+
+        <!-- ===== VIEW 2: WAITING (built in a later step) ===== -->
+        <section id="view-waiting" class="view view-waiting" hidden>
+            <h1>Agent dashboard</h1>
+            <p>Waiting view: coming in a later step.</p>
+        </section>
+
+        <!-- ===== VIEW 3: ACTIVE CALL (built in a later step) ===== -->
+        <section id="view-call" class="view view-call" hidden>
+            <h1>Live support</h1>
+            <p>Active call view: coming in a later step.</p>
+        </section>
+
+    </main>
+
+    <!-- JavaScript is added in step 2b, e.g.:
+       <script type="module" src="/agent/js/main.js"></script> -->
+</body>
+
+</html>
