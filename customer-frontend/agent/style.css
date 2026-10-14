@@ -1,0 +1,350 @@
+/* =========================================================
+   shopdarret — Human agent dashboard
+   Shared base + LOGIN view (waiting & call styled later)
+   ========================================================= */
+
+/* ---------- 1. Colours & sizes (reuse everywhere) ---------- */
+:root {
+    --navy: #0E3155;
+    /* buttons, titles, logo, headset */
+    --navy-hover: #16426F;
+    --slate: #55718D;
+    /* input icons, secondary text */
+    --muted: #7B90A5;
+    /* placeholder / hint text */
+    --text: #1C2B3A;
+    /* normal body text */
+    --page-bg: #F4F1EA;
+    /* warm off-white page */
+    --card-bg: #FDFCFA;
+    /* login card */
+    --border: #DCE2E8;
+    /* card + input borders */
+    --focus: #3B82C4;
+    /* keyboard focus ring */
+    --error: #B42318;
+    --error-bg: #FDECEA;
+    --info: #1D4E7E;
+    --info-bg: #EAF2FA;
+
+    --radius-card: 16px;
+    --radius-input: 10px;
+    --font: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+}
+
+/* ---------- 2. Reset & base ---------- */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+/* The "do not show" sign always wins over any display rule */
+[hidden] {
+    display: none !important;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    min-height: 100vh;
+    font-family: var(--font);
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--text);
+    background: var(--page-bg);
+}
+
+img {
+    display: block;
+    max-width: 100%;
+}
+
+h1,
+h2,
+p {
+    margin: 0;
+}
+
+/* Visible focus ring for keyboard users only */
+:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+}
+
+/* ---------- 3. Brand (logo) — shared ---------- */
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.brand-icon {
+    width: 32px;
+    height: 32px;
+}
+
+.brand-name {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--navy);
+    letter-spacing: -0.01em;
+}
+
+/* ---------- 4. LOGIN view layout ---------- */
+.view-login {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr minmax(320px, 440px);
+    align-items: center;
+    gap: 48px;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 48px;
+}
+
+/* Left side */
+.login-intro {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.login-intro .brand {
+    margin-bottom: 28px;
+}
+
+.login-title {
+    font-size: clamp(2rem, 3.5vw, 2.75rem);
+    line-height: 1.15;
+    font-weight: 700;
+    color: var(--navy);
+    max-width: 12ch;
+    /* breaks into "Human Agent / Sign In" */
+}
+
+.login-subtitle {
+    font-size: 1.05rem;
+    color: var(--slate);
+    max-width: 34ch;
+}
+
+.login-illustration {
+    width: 140px;
+    height: 140px;
+    margin-top: 24px;
+}
+
+/* Right side: card */
+.login-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    padding: 40px 36px 28px;
+    box-shadow: 0 10px 30px rgba(14, 49, 85, 0.06);
+}
+
+.card-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--navy);
+}
+
+.card-subtitle {
+    margin-top: 4px;
+    margin-bottom: 28px;
+    color: var(--slate);
+}
+
+/* ---------- 5. Form ---------- */
+.login-form {
+    display: flex;
+    flex-direction: column;
+}
+
+.field-label {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--navy);
+    margin-bottom: 8px;
+}
+
+/* Wrapper that holds icon + input (+ eye button) */
+.input-wrap {
+    position: relative;
+    margin-bottom: 22px;
+}
+
+.input-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    pointer-events: none;
+    /* clicks go through to the input */
+}
+
+.input-wrap input {
+    width: 100%;
+    height: 48px;
+    padding: 0 48px 0 44px;
+    /* room for left icon and right eye button */
+    font: inherit;
+    font-size: 0.98rem;
+    color: var(--text);
+    background: #FFFFFF;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-input);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.input-wrap input::placeholder {
+    color: var(--muted);
+}
+
+.input-wrap input:focus {
+    outline: none;
+    border-color: var(--focus);
+    box-shadow: 0 0 0 3px rgba(59, 130, 196, 0.2);
+}
+
+/* Eye (show / hide password) button */
+.toggle-password {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.toggle-password img {
+    width: 20px;
+    height: 20px;
+}
+
+.toggle-password:hover {
+    background: rgba(85, 113, 141, 0.1);
+}
+
+/* Sign in button */
+.btn-primary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    height: 50px;
+    margin-top: 6px;
+    font: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #FFFFFF;
+    background: var(--navy);
+    border: none;
+    border-radius: var(--radius-input);
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.btn-primary:hover {
+    background: var(--navy-hover);
+}
+
+/* Used while "Signing in…" so double clicks do nothing */
+.btn-primary:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.btn-icon {
+    width: 18px;
+    height: 18px;
+}
+
+/* Message area under the button (empty = takes no space) */
+.login-message {
+    margin-top: 14px;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.login-message:empty {
+    display: none;
+}
+
+/* JS adds ONE of these classes depending on the message */
+.login-message.is-error {
+    color: var(--error);
+    background: var(--error-bg);
+    padding: 10px 12px;
+    border-radius: 8px;
+}
+
+.login-message.is-info {
+    color: var(--info);
+    background: var(--info-bg);
+    padding: 10px 12px;
+    border-radius: 8px;
+}
+
+/* Need help? link */
+.help-text {
+    margin-top: 22px;
+    text-align: center;
+    font-size: 0.85rem;
+}
+
+.help-text a {
+    color: var(--slate);
+    text-decoration: none;
+}
+
+.help-text a:hover {
+    color: var(--navy);
+    text-decoration: underline;
+}
+
+/* ---------- 6. Small screens (phones / narrow tablets) ---------- */
+@media (max-width: 820px) {
+    .view-login {
+        grid-template-columns: 1fr;
+        gap: 28px;
+        padding: 24px 20px;
+        align-content: start;
+    }
+
+    .login-intro {
+        gap: 12px;
+    }
+
+    .login-intro .brand {
+        margin-bottom: 12px;
+    }
+
+    .login-title {
+        max-width: none;
+    }
+
+    .login-illustration {
+        display: none;
+        /* save space on phones */
+    }
+
+    .login-card {
+        padding: 28px 22px 22px;
+    }
+}
