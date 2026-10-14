@@ -9,6 +9,9 @@ export const API_BASE_URL = "https://shopdarret.onrender.com";
 // Backend routes
 export const LOGIN_PATH = "/agent/login";
 
+export const VERIFY_PATH = "/agent/dashboard";   // "is my token still valid?"
+
+
 // After this long with no answer, tell the agent the server is waking up
 export const SLOW_NOTICE_MS = 5000;   // 5 seconds
 

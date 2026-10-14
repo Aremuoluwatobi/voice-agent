@@ -24,34 +24,38 @@ const MESSAGES = {
 
 let isSubmitting = false;
 
+// ---------- Helpers other files can use (main.js, api.js) ----------
+
+// Show a message under the Sign in button. type: "error" | "info".
+// Pass "" as text to clear it. Uses textContent only (never innerHTML).
+export function setLoginStatus(text, type = "info") {
+    const message = document.getElementById("login-message");
+    if (!message) return;
+    message.textContent = text;
+    message.classList.remove("is-error", "is-info");
+    if (text) {
+        message.classList.add(type === "error" ? "is-error" : "is-info");
+    }
+}
+
+// Disable / enable the Sign in button (also blocks the Enter key)
+export function setLoginBusy(busy) {
+    const submitButton = document.getElementById("login-submit");
+    isSubmitting = busy;
+    if (submitButton) {
+        submitButton.disabled = busy;
+        submitButton.setAttribute("aria-busy", String(busy));
+    }
+}
+
 // ---------- Called once by main.js ----------
 // onSuccess(token) runs after a successful login.
 export function initLogin({ onSuccess }) {
     const form = document.getElementById("login-form");
     const emailInput = document.getElementById("login-email");
     const passwordInput = document.getElementById("login-password");
-    const submitButton = document.getElementById("login-submit");
-    const message = document.getElementById("login-message");
     const toggleButton = document.getElementById("toggle-password");
     const toggleIcon = document.getElementById("toggle-password-icon");
-
-    // ----- Message helpers (textContent only, never innerHTML) -----
-    function showMessage(text, type) {
-        message.textContent = text;
-        message.classList.remove("is-error", "is-info");
-        message.classList.add(type === "error" ? "is-error" : "is-info");
-    }
-
-    function clearMessage() {
-        message.textContent = "";
-        message.classList.remove("is-error", "is-info");
-    }
-
-    function setLoading(loading) {
-        isSubmitting = loading;
-        submitButton.disabled = loading;
-        submitButton.setAttribute("aria-busy", String(loading));
-    }
 
     // ----- Show / hide password -----
     const eyeIconSrc = toggleIcon.getAttribute("src"); // the "eye" path from the HTML
@@ -72,23 +76,23 @@ export function initLogin({ onSuccess }) {
     form.addEventListener("submit", async (event) => {
         event.preventDefault(); // stop the page from reloading
 
-        if (isSubmitting) return; // double-click guard
+        if (isSubmitting) return; // double-click guard (also blocks during session check)
 
         const email = emailInput.value.trim();
         const password = passwordInput.value;
 
         if (!email || !password) {
-            showMessage(MESSAGES.missingFields, "error");
+            setLoginStatus(MESSAGES.missingFields, "error");
             return;
         }
 
-        setLoading(true);
-        showMessage(MESSAGES.signingIn, "info");
+        setLoginBusy(true);
+        setLoginStatus(MESSAGES.signingIn, "info");
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
         const slowNoticeId = setTimeout(
-            () => showMessage(MESSAGES.wakingUp, "info"),
+            () => setLoginStatus(MESSAGES.wakingUp, "info"),
             SLOW_NOTICE_MS
         );
 
@@ -112,36 +116,36 @@ export function initLogin({ onSuccess }) {
 
                 const token = data && typeof data.token === "string" ? data.token : "";
                 if (!token) {
-                    showMessage(MESSAGES.generic, "error");
+                    setLoginStatus(MESSAGES.generic, "error");
                     return;
                 }
 
-                clearMessage();
+                setLoginStatus("");
                 setPasswordVisible(false); // never leave the password showing
                 onSuccess(token);
                 return;
             }
 
             if (response.status === 401) {
-                showMessage(MESSAGES.wrongLogin, "error");
+                setLoginStatus(MESSAGES.wrongLogin, "error");
             } else if (response.status === 400) {
-                showMessage(MESSAGES.missingFields, "error");
+                setLoginStatus(MESSAGES.missingFields, "error");
             } else if (response.status === 429) {
-                showMessage(MESSAGES.tooMany, "error");
+                setLoginStatus(MESSAGES.tooMany, "error");
             } else {
-                showMessage(MESSAGES.generic, "error");
+                setLoginStatus(MESSAGES.generic, "error");
             }
         } catch (error) {
             // AbortError = our 60s timeout; anything else = network / CORS / server down
             if (error.name === "AbortError") {
-                showMessage(MESSAGES.timeout, "error");
+                setLoginStatus(MESSAGES.timeout, "error");
             } else {
-                showMessage(MESSAGES.offline, "error");
+                setLoginStatus(MESSAGES.offline, "error");
             }
         } finally {
             clearTimeout(timeoutId);
             clearTimeout(slowNoticeId);
-            setLoading(false);
+            setLoginBusy(false);
         }
     });
 }

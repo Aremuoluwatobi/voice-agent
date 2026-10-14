@@ -348,3 +348,18 @@ p {
         padding: 28px 22px 22px;
     }
 }
+
+.btn-logout {
+    font: inherit;
+    font-size: 0.9rem;
+    color: var(--navy);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+}
+
+.btn-logout:hover {
+    background: rgba(14, 49, 85, 0.06);
+}
