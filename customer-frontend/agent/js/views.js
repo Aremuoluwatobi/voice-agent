@@ -5,7 +5,7 @@
 
 const VIEW_NAMES = ["login", "waiting", "call"];
 
-let currentView = "login";
+let currentView = null;
 
 export function showView(name) {
     if (!VIEW_NAMES.includes(name)) {
@@ -33,4 +33,13 @@ export function showView(name) {
 
 export function getCurrentView() {
     return currentView;
+}
+
+// Top-bar status, e.g. "Online", "Connecting…", "Can't reach server".
+// state: "online" | "checking" | "offline" (used by CSS later for the dot colour)
+export function setAgentStatus(text, state) {
+    const status = document.getElementById("agent-status");
+    if (!status) return;
+    status.textContent = text;
+    status.setAttribute("data-state", state);
 }

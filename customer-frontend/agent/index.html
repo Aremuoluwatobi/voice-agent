@@ -18,7 +18,7 @@
         </div>
         <div class="top-bar-right">
             <span id="agent-status" class="status">Online</span>
-            <span id="agent-name" class="agent-name">PLACEHOLDER_AGENT_NAME</span>
+            <span id="agent-name" class="agent-name">SUPPORT AGENT</span>
             <button type="button" id="logout-button" class="btn-logout">Log out</button>
         </div>
     </header>
@@ -26,7 +26,7 @@
     <main>
 
         <!-- ===== VIEW 1: LOGIN ===== -->
-        <section id="view-login" class="view view-login">
+        <section id="view-login" class="view view-login" hidden>
 
             <!-- Left side: brand + intro -->
             <div class="login-intro">
@@ -41,6 +41,7 @@
                 </p>
 
                 <img src="/agent/icons/PLACEHOLDER_HEADPHONES.svg" alt="" class="login-illustration">
+
             </div>
 
             <!-- Right side: login card -->
@@ -48,7 +49,7 @@
                 <h2 class="card-title">Welcome back,</h2>
                 <p class="card-subtitle">Sign in to continue</p>
 
-                <form id="login-form" class="login-form">
+                <form id="login-form" class="login-form" method="post">
 
                     <!-- Email -->
                     <label for="login-email" class="field-label">Email address</label>
@@ -81,9 +82,11 @@
                 </form>
 
                 <p class="help-text">
-                    <a href="mailto:http://aremu-taiwo-portfolio.vercel.app/?subject=Agent%20login%20help">Need help?
-                        Contact
-                        support</a>
+                    <a href="https://aremu-taiwo-portfolio.vercel.app/" target="_blank" rel="noopener">Need help?
+                        Contact support</a>
+
+                    Contact
+                    support</a>
                 </p>
             </div>
         </section>

@@ -44,3 +44,27 @@ export function clearToken() {
 export function hasToken() {
     return getToken() !== "";
 }
+
+// Quick LOCAL check of the token's "exp" time, so an obviously expired
+// token goes straight to login without showing the dashboard first.
+// This only READS the token; it does not prove it is genuine —
+// the backend still makes the real decision.
+// Anything unreadable counts as expired.
+export function isTokenExpired(token = getToken()) {
+    try {
+        const payloadPart = token.split(".")[1];
+        if (!payloadPart) return true;
+
+        // JWT uses base64url: convert to normal base64 and add padding
+        let base64 = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
+        while (base64.length % 4 !== 0) base64 += "=";
+
+        const payload = JSON.parse(atob(base64));
+        if (typeof payload.exp !== "number") return true;
+
+        const nowSeconds = Date.now() / 1000;
+        return nowSeconds >= payload.exp;
+    } catch {
+        return true;
+    }
+}
