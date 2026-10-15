@@ -7,6 +7,9 @@ const VIEW_NAMES = ["login", "waiting", "call"];
 
 let currentView = null;
 
+const viewChangeListeners = [];
+
+
 export function showView(name) {
     if (!VIEW_NAMES.includes(name)) {
         console.error(`Unknown view: ${name}`);
@@ -29,11 +32,23 @@ export function showView(name) {
 
     currentView = name;
     window.scrollTo(0, 0);
+    // Tell other files the view changed (e.g. the popup hides itself)
+    for (const listener of viewChangeListeners) {
+        listener(name);
+    }
+
 }
 
 export function getCurrentView() {
     return currentView;
 }
+
+// Other files can ask to be told when the view changes.
+// listener(name) is called after every showView().
+export function onViewChange(listener) {
+    viewChangeListeners.push(listener);
+}
+
 
 // Top-bar status, e.g. "Online", "Connecting…", "Can't reach server".
 // state: "online" | "checking" | "offline" (used by CSS later for the dot colour)

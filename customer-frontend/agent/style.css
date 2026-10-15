@@ -349,7 +349,88 @@ p {
     }
 }
 
-.btn-logout {
+/* =========================================================
+   Step 3a — top bar, waiting view, incoming-call popup
+   ========================================================= */
+
+/* ---------- Top bar ---------- */
+.top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 24px;
+    background: var(--card-bg);
+    border-bottom: 1px solid var(--border);
+}
+
+.top-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.top-bar-logo-text {
+    font-weight: 700;
+    font-size: 1.15rem;
+    color: var(--navy);
+}
+
+.top-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+    /* lets a long name shrink instead of breaking the bar */
+}
+
+.status-wrap {
+    display: inline-flex;
+    align-items: center;
+    color: var(--navy);
+    font-size: 0.95rem;
+    white-space: nowrap;
+}
+
+/* The coloured dot is drawn in front of the status text */
+#agent-status::before {
+    content: "";
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    margin-right: 6px;
+    border-radius: 50%;
+    background: #9AA7B4;
+    /* checking = grey */
+}
+
+#agent-status[data-state="online"]::before {
+    background: #22A65A;
+    /* green */
+}
+
+#agent-status[data-state="offline"]::before {
+    background: #D64545;
+    /* red */
+}
+
+.top-bar-divider {
+    width: 1px;
+    height: 24px;
+    background: var(--border);
+}
+
+.agent-name {
+    color: var(--navy);
+    font-weight: 600;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.btn-logout,
+.btn-sound {
     font: inherit;
     font-size: 0.9rem;
     color: var(--navy);
@@ -358,8 +439,212 @@ p {
     border-radius: 8px;
     padding: 6px 12px;
     cursor: pointer;
+    white-space: nowrap;
 }
 
-.btn-logout:hover {
+.btn-sound {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #FFF4E0;
+    /* soft orange, like the "Incoming" badge */
+    border-color: #F2C98A;
+}
+
+.btn-logout:hover,
+.btn-sound:hover {
     background: rgba(14, 49, 85, 0.06);
+}
+
+/* ---------- Waiting view ---------- */
+.view-waiting {
+    position: relative;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px;
+}
+
+.waiting-title {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--navy);
+}
+
+.waiting-subtitle {
+    margin: 4px 0 16px;
+    color: var(--slate);
+}
+
+.waiting-card {
+    max-width: 500px;
+    padding: 28px 24px;
+    text-align: center;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+}
+
+.waiting-icon-circle {
+    width: 88px;
+    height: 88px;
+    margin: 0 auto 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(14, 49, 85, 0.06);
+}
+
+.waiting-card-title {
+    margin: 0 0 8px;
+    font-size: 1.2rem;
+    color: var(--navy);
+}
+
+.waiting-card-text {
+    margin: 0 0 24px;
+    color: var(--slate);
+}
+
+.waiting-no-call {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 16px;
+    border-radius: 8px;
+    background: rgba(14, 49, 85, 0.05);
+    color: var(--slate);
+}
+
+/* ---------- Incoming-call popup ---------- */
+.incoming-call {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    width: 340px;
+    padding: 16px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(14, 49, 85, 0.15);
+}
+
+.incoming-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.incoming-title {
+    font-weight: 600;
+    color: var(--navy);
+}
+
+.incoming-badge {
+    margin-left: auto;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #B4600A;
+    background: #FFE9C7;
+}
+
+.incoming-summary {
+    margin: 0 0 4px;
+    color: var(--navy);
+    overflow-wrap: anywhere;
+    /* long words never break the box */
+}
+
+.incoming-order {
+    margin: 0 0 4px;
+    color: var(--slate);
+    font-size: 0.9rem;
+    overflow-wrap: anywhere;
+}
+
+.incoming-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.btn-accept,
+.btn-decline {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font: inherit;
+    font-weight: 600;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.btn-accept {
+    color: #FFFFFF;
+    background: var(--navy);
+    border: 1px solid var(--navy);
+}
+
+.btn-decline {
+    color: var(--navy);
+    background: var(--card-bg);
+    border: 1px solid var(--navy);
+}
+
+.btn-accept:disabled,
+.btn-decline:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ---------- Phones / narrow screens ---------- */
+@media (max-width: 820px) {
+    .top-bar {
+        flex-wrap: wrap;
+        padding: 10px 12px;
+    }
+
+    .top-bar-right {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .top-bar-divider {
+        display: none;
+    }
+
+    .view-waiting {
+        padding: 16px 12px;
+    }
+
+    .view-waiting:not([hidden]) {
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Popup sits in the page flow, between the title and the card */
+    .incoming-call {
+        position: static;
+        width: auto;
+        margin-bottom: 16px;
+    }
+
+    .waiting-header {
+        order: 0;
+    }
+
+    .incoming-call {
+        order: 1;
+    }
+
+    .waiting-card {
+        order: 2;
+    }
 }

@@ -12,16 +12,30 @@
 
     <!-- ===== TOP BAR (shared by waiting + call views, hidden on login) ===== -->
     <header id="top-bar" class="top-bar" hidden>
-        <div class="brand">
-            <img src="/agent/icons/PLACEHOLDER_LOGO_BAG.svg" alt="" class="brand-icon">
-            <span class="brand-name">shopdarret</span>
+        <div class="top-bar-left">
+            <img src="/agent/icons/topbar-bag-waiting.svg" alt="" class="top-bar-logo-icon" width="28" height="28"
+                aria-hidden="true">
+            <span class="top-bar-logo-text">shopdarret</span>
         </div>
+
         <div class="top-bar-right">
-            <span id="agent-status" class="status">Online</span>
-            <span id="agent-name" class="agent-name">SUPPORT AGENT</span>
+            <button type="button" id="enable-sound-button" class="btn-sound" hidden>
+                <img src="/agent/icons/topbar-volume-x.svg" alt="" width="16" height="16" aria-hidden="true">
+                <span>Click to enable sound</span>
+            </button>
+
+            <span class="status-wrap">
+                <span id="agent-status" data-state="checking">Connecting…</span>
+            </span>
+
+            <span class="top-bar-divider" aria-hidden="true"></span>
+
+            <span id="agent-name" class="agent-name">Aremu T.</span>
+
             <button type="button" id="logout-button" class="btn-logout">Log out</button>
         </div>
     </header>
+
 
     <main>
 
@@ -91,11 +105,50 @@
             </div>
         </section>
 
-        <!-- ===== VIEW 2: WAITING (built in a later step) ===== -->
+        <!-- ===== VIEW 2: WAITING ===== -->
         <section id="view-waiting" class="view view-waiting" hidden>
-            <h1>Agent dashboard</h1>
-            <p>Waiting view: coming in a later step.</p>
+            <div class="waiting-header">
+                <h1 class="waiting-title">Agent dashboard</h1>
+                <p class="waiting-subtitle">Welcome back, Support Agent</p>
+            </div>
+
+            <div class="waiting-card">
+                <div class="waiting-icon-circle">
+                    <img src="/agent/icons/waiting-headphones.svg" alt="" width="48" height="48" aria-hidden="true">
+                </div>
+                <h2 class="waiting-card-title">Waiting for incoming calls</h2>
+                <p class="waiting-card-text">You're online and ready to assist customers.</p>
+
+                <div class="waiting-no-call">
+                    <img src="/agent/icons/waiting-phone-call.svg" alt="" width="20" height="20" aria-hidden="true">
+                    <span>No active call</span>
+                </div>
+            </div>
+
+            <!-- Incoming-call popup: hidden until a REAL alert arrives (step 3b/3c) -->
+            <div id="incoming-call" class="incoming-call" role="alert" aria-live="assertive" hidden>
+                <div class="incoming-head">
+                    <img src="/agent/icons/waiting-bell.svg" alt="" width="20" height="20" aria-hidden="true">
+                    <span class="incoming-title">Incoming call</span>
+                    <span class="incoming-badge">Incoming</span>
+                </div>
+
+                <p id="incoming-summary" class="incoming-summary"></p>
+                <p id="incoming-order" class="incoming-order" hidden></p>
+
+                <div class="incoming-actions">
+                    <button type="button" id="incoming-decline" class="btn-decline">
+                        <img src="/agent/icons/waiting-phone-off.svg" alt="" width="18" height="18" aria-hidden="true">
+                        <span>Decline</span>
+                    </button>
+                    <button type="button" id="incoming-accept" class="btn-accept">
+                        <img src="/agent/icons/waiting-phone.svg" alt="" width="18" height="18" aria-hidden="true">
+                        <span>Accept call</span>
+                    </button>
+                </div>
+            </div>
         </section>
+
 
         <!-- ===== VIEW 3: ACTIVE CALL (built in a later step) ===== -->
         <section id="view-call" class="view view-call" hidden>

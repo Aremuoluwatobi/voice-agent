@@ -20,3 +20,9 @@ export const REQUEST_TIMEOUT_MS = 60000;   // 60 seconds
 
 // Icon shown while the password is VISIBLE (the "eye" icon path is read from the HTML)
 export const ICON_EYE_OFF = "/agent/icons/PLACEHOLDER_EYE_OFF.svg";
+
+// ----- Step 3a: incoming-call popup + ring -----
+export const INCOMING_TIMEOUT_MS = 30000; // same 30s as my-agent's wait
+export const RING_INTERVAL_MS = 2500;     // one ring every 2.5s
+export const SUMMARY_MAX_CHARS = 200;     // popup summary is cut after this
+export const ORDER_ID_MAX_CHARS = 40;

@@ -14,6 +14,23 @@ import {
   isTokenExpired,
 } from "./auth.js";
 import { apiFetch } from "./api.js";
+import { initSound, refreshSoundButton } from "./sound.js";
+import { initIncoming, hideIncomingCall, clearDeclinedCalls } from "./incoming.js";
+
+// ---------- Sound (ring + "Click to enable sound" button) ----------
+initSound();
+
+// ---------- Incoming-call popup ----------
+initIncoming({
+  onAccept: () => {
+    // Step 3c: tell the backend "I accept"; first come, first served.
+    hideIncomingCall();
+  },
+  onDecline: () => {
+    // Step 3c: quietly tell the backend this agent declined.
+  },
+});
+
 
 // ---------- Login ----------
 initLogin({
@@ -21,6 +38,8 @@ initLogin({
     saveToken(token);
     setAgentStatus("Online", "online");
     showView("waiting");
+    clearDeclinedCalls();
+
   },
 });
 
@@ -29,6 +48,7 @@ const logoutButton = document.getElementById("logout-button");
 if (logoutButton) {
   logoutButton.addEventListener("click", () => {
     clearToken();
+    clearDeclinedCalls();
     showView("login");
     setLoginStatus("You have been logged out.", "info");
   });
@@ -55,6 +75,8 @@ async function checkSession() {
   //    and confirm with the backend in the background.
   showView("waiting");
   setAgentStatus("Connecting…", "checking");
+  clearDeclinedCalls();
+
 
   const result = await apiFetch(VERIFY_PATH, {
     onSlow: () => setAgentStatus("Server waking up…", "checking"),
@@ -62,7 +84,7 @@ async function checkSession() {
 
   if (result.ok) {
     setAgentStatus("Online", "online");
-    // Step 3: open the incoming-call WebSocket HERE,
+    // Step 3b: open the incoming-call WebSocket HERE,
     // only after the backend has confirmed the token.
     return;
   }
