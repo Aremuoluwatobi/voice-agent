@@ -2,8 +2,6 @@ from fastapi.security import HTTPBearer
 import jwt
 from fastapi import Depends, HTTPException
 from config import LOGIN_EMAIL, SECRET_KEY, ALGORITHM
-
-
 from logger_s import get_logger
 
 logger = get_logger(__name__)
@@ -40,7 +38,7 @@ def verify_token(token):
 
 def secure_route(guard=Depends(security)):
     try:
-        return secure_route(guard.credentials)
+        return verify_token(guard.credentials)
     except TokenCheckError as e:
         logger.error(f"Invalid Token: {e}")
         raise HTTPException(
