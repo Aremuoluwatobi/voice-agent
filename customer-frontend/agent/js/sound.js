@@ -1,11 +1,5 @@
 // =========================================================
 // sound.js — the incoming-call ring + the "enable sound" button.
-// - The ring is made by the browser (Web Audio API): no sound file,
-//   nothing extra on Render or Vercel.
-// - Browsers block sound until the agent has clicked/tapped/typed
-//   on the page. After a refresh that usually means "blocked", so
-//   we show the "Click to enable sound" button in the top bar.
-// - If sound stays blocked, nothing breaks: the popup still shows.
 // =========================================================
 
 import { RING_INTERVAL_MS, INCOMING_TIMEOUT_MS } from "./config.js";

@@ -4,7 +4,7 @@
 // =========================================================
 
 import { VERIFY_PATH } from "./config.js";
-import { showView, setAgentStatus } from "./views.js";
+import { showView, setAgentStatus, onViewChange } from "./views.js";
 import { initLogin, setLoginStatus } from "./login.js";
 import {
   saveToken,
@@ -16,18 +16,37 @@ import {
 import { apiFetch } from "./api.js";
 import { initSound, refreshSoundButton } from "./sound.js";
 import { initIncoming, hideIncomingCall, clearDeclinedCalls } from "./incoming.js";
+import { initTranscript, clearTranscript } from "./call-transcript.js";
+import { initHandoff, clearHandoff } from "./call-handoff.js";
+
 
 // ---------- Sound (ring + "Click to enable sound" button) ----------
 initSound();
 
+
+// ---------- Active call view ----------
+
+initTranscript();
+initHandoff();
+
+// Going back to login (Log out, any 401, expired or missing token)
+onViewChange((name) => {
+  if (name !== "login") return;
+  clearTranscript();
+  clearHandoff();
+  const helperSearch = document.getElementById("call-helper-search");
+  if (helperSearch) helperSearch.value = "";
+});
+
+
 // ---------- Incoming-call popup ----------
 initIncoming({
   onAccept: () => {
-    // Step 3c: tell the backend "I accept"; first come, first served.
+
     hideIncomingCall();
   },
   onDecline: () => {
-    // Step 3c: quietly tell the backend this agent declined.
+
   },
 });
 
@@ -38,8 +57,8 @@ initLogin({
     saveToken(token);
     setAgentStatus("Online", "online");
     showView("waiting");
+    refreshSoundButton();
     clearDeclinedCalls();
-
   },
 });
 
@@ -63,7 +82,7 @@ async function checkSession() {
     return;
   }
 
-  // 2. Token clearly expired (read locally) → login, no dashboard flash
+
   if (isTokenExpired(getToken())) {
     clearToken();
     showView("login");
@@ -71,12 +90,11 @@ async function checkSession() {
     return;
   }
 
-  // 3. Token looks fine → show the dashboard straight away,
-  //    and confirm with the backend in the background.
+
   showView("waiting");
   setAgentStatus("Connecting…", "checking");
+  refreshSoundButton();
   clearDeclinedCalls();
-
 
   const result = await apiFetch(VERIFY_PATH, {
     onSlow: () => setAgentStatus("Server waking up…", "checking"),
@@ -84,13 +102,12 @@ async function checkSession() {
 
   if (result.ok) {
     setAgentStatus("Online", "online");
-    // Step 3b: open the incoming-call WebSocket HERE,
-    // only after the backend has confirmed the token.
+
     return;
   }
 
   if (result.reason === "unauthorized" || result.reason === "no-token") {
-    // api.js already cleared the token and showed login + message
+
     return;
   }
 

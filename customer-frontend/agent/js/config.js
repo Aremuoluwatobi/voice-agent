@@ -1,7 +1,5 @@
 // =========================================================
 // config.js — settings used by the other files
-// Nothing in this file is secret: anyone can see these
-// values in the browser's Network tab.
 // =========================================================
 
 export const API_BASE_URL = "https://shopdarret.onrender.com";
@@ -18,7 +16,7 @@ export const SLOW_NOTICE_MS = 5000;   // 5 seconds
 // Give up completely after this long
 export const REQUEST_TIMEOUT_MS = 60000;   // 60 seconds
 
-// Icon shown while the password is VISIBLE (the "eye" icon path is read from the HTML)
+// Icon shown while the password is VISIBLE 
 export const ICON_EYE_OFF = "/agent/icons/PLACEHOLDER_EYE_OFF.svg";
 
 // ----- Step 3a: incoming-call popup + ring -----

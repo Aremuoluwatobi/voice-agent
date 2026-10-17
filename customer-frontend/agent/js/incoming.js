@@ -1,13 +1,5 @@
 // =========================================================
 // incoming.js — the incoming-call popup on the waiting view.
-// - No fake data: the popup stays hidden until a REAL alert
-//   arrives (step 3b/3c calls showIncomingCall(alert)).
-// - Alert shape (agreed in step 3):
-//     { handoff_id: "abc123",          required, not shown
-//       summary:    "Caller says...",  AI summary, optional
-//       order_id:   "48213-NG" }       only if confirmed, optional
-// - Decline = hides it in THIS browser only (others still see it).
-// - All text goes in with textContent, never innerHTML.
 // =========================================================
 
 import {
@@ -20,15 +12,14 @@ import { startRinging, stopRinging } from "./sound.js";
 
 const FALLBACK_SUMMARY = "Customer needs assistance";
 const DECLINED_KEY = "shopdarret_declined_calls";
-const DECLINED_MAX = 50; // keep only the latest 50 declined IDs
+const DECLINED_MAX = 50;
 
-let currentAlert = null;   // the alert on screen, or null
+let currentAlert = null;
 let expiryTimerId = null;
 let handlers = { onAccept: () => { }, onDecline: () => { } };
 
 // ---------- Small helpers ----------
 
-// Collapse spaces/new lines, trim, and cut long text with "…"
 function cleanText(value, maxChars) {
     if (typeof value !== "string") return "";
     const text = value.replace(/\s+/g, " ").trim();
@@ -51,7 +42,7 @@ function rememberDeclined(handoffId) {
     try {
         sessionStorage.setItem(DECLINED_KEY, JSON.stringify(declined.slice(-DECLINED_MAX)));
     } catch {
-        // storage blocked: Decline still hides it, it just won't be remembered
+
     }
 }
 
@@ -69,17 +60,16 @@ export function clearDeclinedCalls() {
 
 // ---------- Show / hide ----------
 
-// Called by the real alert (step 3b/3c). Returns true if shown.
 export function showIncomingCall(alert) {
-    // Only on the waiting view. null = page not ready → do nothing.
+
     if (getCurrentView() !== "waiting") return false;
     if (!alert || typeof alert !== "object") return false;
 
     const handoffId = typeof alert.handoff_id === "string" ? alert.handoff_id.trim() : "";
     if (!handoffId || handoffId.length > 100) return false;
 
-    if (isDeclined(handoffId)) return false;                               // declined here before
-    if (currentAlert && currentAlert.handoffId === handoffId) return true; // already showing
+    if (isDeclined(handoffId)) return false;
+    if (currentAlert && currentAlert.handoffId === handoffId) return true;
 
     const summary = cleanText(alert.summary, SUMMARY_MAX_CHARS) || FALLBACK_SUMMARY;
     const orderId = cleanText(alert.order_id, ORDER_ID_MAX_CHARS).replace(/^#+/, "");
@@ -95,7 +85,7 @@ export function showIncomingCall(alert) {
         orderText.hidden = false;
     } else {
         orderText.textContent = "";
-        orderText.hidden = true; // no confirmed order ID → no order line
+        orderText.hidden = true;
     }
 
     setButtonsDisabled(false);
@@ -104,7 +94,6 @@ export function showIncomingCall(alert) {
 
     startRinging(); // silent if the browser is still blocking sound
 
-    // Safety net: hide by itself after 30s (my-agent gives up at 30s too)
     clearTimeout(expiryTimerId);
     expiryTimerId = setTimeout(() => hideIncomingCall(), INCOMING_TIMEOUT_MS);
 
@@ -122,7 +111,6 @@ export function hideIncomingCall() {
     if (popup) popup.hidden = true;
 }
 
-// The alert on screen (or null). Step 3c uses this.
 export function getCurrentAlert() {
     return currentAlert;
 }
@@ -135,7 +123,7 @@ function setButtonsDisabled(disabled) {
 }
 
 // ---------- Called once by main.js ----------
-// onAccept(alert) / onDecline(alert): step 3c fills these in.
+
 export function initIncoming({ onAccept, onDecline } = {}) {
     if (onAccept) handlers.onAccept = onAccept;
     if (onDecline) handlers.onDecline = onDecline;
@@ -148,7 +136,7 @@ export function initIncoming({ onAccept, onDecline } = {}) {
             if (!currentAlert) return;
             const alert = currentAlert;
             stopRinging();
-            setButtonsDisabled(true); // one click only; step 3c decides what's next
+            setButtonsDisabled(true);
             handlers.onAccept(alert);
         });
     }

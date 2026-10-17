@@ -648,3 +648,34 @@ p {
         order: 2;
     }
 }
+
+/* =========================================================
+   ACTIVE CALL VIEW 
+   Append AFTER block 2 at the very end of /agent/style.css.
+   ========================================================= */
+
+.view-call .call-empty {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 16px;
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--call-muted);
+    pointer-events: none;
+}
+
+/* empty-state text for captions  and helper results .
+.view-call .call-placeholder {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--call-muted);
+}
+
+/* the results box has a grey background: hide it while it has no rows */
+.call-helper-results:empty {
+    display: none;
+}

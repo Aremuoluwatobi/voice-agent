@@ -1,8 +1,5 @@
 // =========================================================
 // api.js — the ONE place every protected request goes through.
-// - Adds "Authorization: Bearer <token>" automatically
-// - Any 401 → delete the token, go back to login
-// - Same timeout + "waking up" pattern as login
 // =========================================================
 
 import { API_BASE_URL, SLOW_NOTICE_MS, REQUEST_TIMEOUT_MS } from "./config.js";
@@ -10,11 +7,7 @@ import { getToken, clearToken } from "./auth.js";
 import { showView } from "./views.js";
 import { setLoginStatus } from "./login.js";
 
-// Result shape returned to callers:
-// { ok: true,  status: 200, data: {...} }
-// { ok: false, status: 401, reason: "unauthorized" }
-// { ok: false, status: 0,   reason: "no-token" | "timeout" | "offline" }
-// { ok: false, status: 4xx/5xx, reason: "error" }
+
 
 export async function apiFetch(path, { method = "GET", body, onSlow } = {}) {
     const token = getToken();

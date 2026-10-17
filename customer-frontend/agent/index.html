@@ -30,7 +30,7 @@
 
             <span class="top-bar-divider" aria-hidden="true"></span>
 
-            <span id="agent-name" class="agent-name">Aremu T.</span>
+            <span id="agent-name" class="agent-name">Support Agent</span>
 
             <button type="button" id="logout-button" class="btn-logout">Log out</button>
         </div>
@@ -151,9 +151,141 @@
 
 
         <!-- ===== VIEW 3: ACTIVE CALL (built in a later step) ===== -->
-        <section id="view-call" class="view view-call" hidden>
-            <h1>Live support</h1>
-            <p>Active call view: coming in a later step.</p>
+        <!-- =========================================================
+     ACTIVE CALL VIEW (Phase 7, step 4 layout) - v2
+     Starts hidden; showView("call") reveals it.
+     ========================================================= -->
+        <section id="view-call" class="view-call" hidden aria-labelledby="call-title">
+
+            <!-- 1. Header + customer handoff card -->
+            <div class="call-card call-handoff">
+                <div class="call-handoff-head">
+                    <div class="call-title-row">
+                        <h1 id="call-title" class="call-title">Live support</h1>
+                        <span class="call-live">
+                            <span class="call-live-dot" aria-hidden="true"></span>
+                            Live call ·
+                            <span id="call-timer" class="call-timer">00:00</span>
+                        </span>
+                    </div>
+                    <!-- Order match score: hidden until Phases 5-6 -->
+                    <span id="call-order-match-pill" class="call-pill" hidden>Order match: <span
+                            id="call-order-match"></span></span>
+                </div>
+
+                <h2 class="call-subtitle">Customer handoff</h2>
+                <dl class="call-facts">
+                    <div class="call-fact">
+                        <dt>Order ID</dt>
+                        <dd id="call-order-id">—</dd>
+                    </div>
+                    <div class="call-fact">
+                        <dt>Product</dt>
+                        <dd id="call-product">—</dd>
+                    </div>
+                    <div class="call-fact">
+                        <dt>Complaint</dt>
+                        <dd id="call-complaint">—</dd>
+                    </div>
+                    <div class="call-fact">
+                        <dt>Agent already told customer</dt>
+                        <dd id="call-told">—</dd>
+                    </div>
+                </dl>
+            </div>
+
+            <!-- 2. The three panels -->
+            <div class="call-panels">
+
+                <!-- 2a. Live transcript (newest at the bottom, older lines move up) -->
+                <article class="call-card call-panel call-panel-transcript" aria-labelledby="call-transcript-title">
+                    <header class="call-panel-head">
+                        <h2 id="call-transcript-title" class="call-panel-title">
+                            <img src="/agent/icons/call-search.svg" alt="" width="20" height="20">
+                            Live transcript
+                        </h2>
+                    </header>
+
+                    <div class="call-panel-body">
+                        <!-- Keep this list EMPTY in the HTML: lines are added by call-transcript.js -->
+                        <ol id="call-transcript-list" class="call-scroll call-transcript-list" aria-live="polite"
+                            aria-relevant="additions" aria-label="Live transcript" tabindex="0"></ol>
+
+                        <!-- Shown by JS whenever the list is empty -->
+                        <p id="call-transcript-empty" class="call-empty">Waiting for the conversation…</p>
+
+                        <!-- Shown only when the agent has scrolled up and a new line arrives -->
+                        <button id="call-jump-latest" type="button" class="call-jump" hidden>
+                            New messages ↓
+                        </button>
+                    </div>
+                </article>
+
+                <!-- 2b. Translation captions (empty state until Phase 8) -->
+                <article class="call-card call-panel" aria-labelledby="call-captions-title">
+                    <header class="call-panel-head">
+                        <h2 id="call-captions-title" class="call-panel-title">
+                            <img src="/agent/icons/call-languages.svg" alt="" width="20" height="20">
+                            Translation captions
+                        </h2>
+                        <span class="call-badge">Layer 2 · English</span>
+                    </header>
+
+                    <div class="call-panel-body">
+                        <div id="call-captions-list" class="call-scroll call-captions" tabindex="0"
+                            aria-label="Translation captions">
+                            <p class="call-placeholder">Captions will appear here.</p>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- 2c. AI agent helper (results empty until Phase 9) -->
+                <article class="call-card call-panel" aria-labelledby="call-helper-title">
+                    <header class="call-panel-head">
+                        <h2 id="call-helper-title" class="call-panel-title">
+                            <img src="/agent/icons/call-bot.svg" alt="" width="20" height="20">
+                            AI agent helper
+                        </h2>
+                        <span class="call-badge">Layer 3</span>
+                    </header>
+
+                    <div class="call-panel-body">
+                        <div class="call-scroll call-helper" tabindex="0" aria-label="AI agent helper">
+                            <label class="call-search" for="call-helper-search">
+                                <img src="/agent/icons/call-file-text.svg" alt="" width="16" height="16">
+                                <span class="visually-hidden">Search the knowledge base</span>
+                                <!-- Accepts typing (not disabled); search is not wired until Phase 9 -->
+                                <input id="call-helper-search" type="search" placeholder="Find the return policy…"
+                                    autocomplete="off">
+                            </label>
+                            <p class="call-helper-note">Retrieved from DB, email, and Google Docs</p>
+
+                            <!-- Keep EMPTY in the HTML: results come in Phase 9 -->
+                            <ul id="call-helper-results" class="call-helper-results"></ul>
+                            <p class="call-placeholder">Results will appear here.</p>
+                        </div>
+                    </div>
+                </article>
+            </div>
+
+            <!-- 3. Suggested resolution + End call -->
+            <div class="call-card call-resolution">
+                <img class="call-resolution-icon" src="/agent/icons/call-lightbulb.svg" alt="" width="24" height="24">
+                <div class="call-resolution-text">
+                    <h2 class="call-subtitle">Suggested resolution</h2>
+                    <p id="call-resolution">No suggestion yet</p>
+                    <div class="call-pills">
+                        <!-- Scores: hidden until Phases 5-6 -->
+                        <span id="call-ragas-pill" class="call-pill" hidden>RAGAS: <span id="call-ragas"></span></span>
+                        <span id="call-order-match-pill-2" class="call-pill" hidden>Order match: <span
+                                id="call-order-match-2"></span></span>
+                    </div>
+                </div>
+                <button id="end-call-button" type="button" class="call-end">
+                    <img src="/agent/icons/call-phone-off.svg" alt="" width="20" height="20">
+                    End call
+                </button>
+            </div>
         </section>
 
     </main>

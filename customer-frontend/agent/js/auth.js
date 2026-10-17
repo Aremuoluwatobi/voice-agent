@@ -1,9 +1,5 @@
 // =========================================================
 // auth.js — keeps the login token in sessionStorage
-// (the "pocket" of this one browser tab).
-// - Survives a page refresh
-// - Gone when the tab is closed
-// - Never printed to the console
 // =========================================================
 
 const TOKEN_KEY = "shopdarret_agent_token";
@@ -45,11 +41,7 @@ export function hasToken() {
     return getToken() !== "";
 }
 
-// Quick LOCAL check of the token's "exp" time, so an obviously expired
-// token goes straight to login without showing the dashboard first.
-// This only READS the token; it does not prove it is genuine —
-// the backend still makes the real decision.
-// Anything unreadable counts as expired.
+
 export function isTokenExpired(token = getToken()) {
     try {
         const payloadPart = token.split(".")[1];
