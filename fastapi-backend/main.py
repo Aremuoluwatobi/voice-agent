@@ -5,6 +5,9 @@ from config import (
     LIVEKIT_API_SECRET,
     LIVEKIT_API_KEY,
     LIVEKIT_URL,
+    FRONTEND_ORIGIN,
+    CALL_LOCK_KEY,
+    LOCK_TIMEOUT_SECONDS
 )
 from config import redis
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,14 +22,14 @@ app = FastAPI()
 app.include_router(router)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://shopdarret.vercel.app"],
+    allow_origins=[FRONTEND_ORIGIN],
     allow_methods=["*"],
     allow_headers=["*"]
 )
 
 
-CALL_LOCK_KEY = "call_active"
-LOCK_TIMEOUT_SECONDS = 60
+CALL_LOCK_KEY = CALL_LOCK_KEY
+LOCK_TIMEOUT_SECONDS = LOCK_TIMEOUT_SECONDS
 
 
 @app.get("/health")

@@ -11,27 +11,39 @@ logger = get_logger(__name__)
 security = HTTPBearer()
 
 
+class TokenCheckError(Exception):
+    "used in secure token"
+
+
+def verify_token(token):
+    if not isinstance(token, str) or not token.strip():
+        raise TokenCheckError("missing token")
+    else:
+        try:
+            decode_token = jwt.decode(
+                token,
+                SECRET_KEY,
+                algorithms=[ALGORITHM],
+                options={"require": ["exp"]})
+            logger.info("Successfully decoded normal token")
+        except jwt.PyJWTError as e:
+            logger.error(f"Invalid Token: {e}")
+            raise TokenCheckError("Invalid token")
+    if decode_token.get("sub") != LOGIN_EMAIL:
+        logger.error("Invalid Email")
+        raise TokenCheckError("Invalid token")
+
+    else:
+        logger.info("successfully matched email")
+        return decode_token
+
+
 def secure_route(guard=Depends(security)):
     try:
-        decode_token = jwt.decode(
-            guard.credentials,
-            SECRET_KEY,
-            algorithms=[ALGORITHM],
-            options={"require": ["exp"]})
-        logger.info("Successfully decoded token")
-    except jwt.PyJWTError as e:
+        return secure_route(guard.credentials)
+    except TokenCheckError as e:
         logger.error(f"Invalid Token: {e}")
         raise HTTPException(
             status_code=401,
             detail="Invalid Token",
             headers={"WWW-Authenticate": "Bearer"})
-
-    if decode_token.get("sub") != LOGIN_EMAIL:
-        logger.error("Invalid Token")
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid Token",
-            headers={"WWW-Authenticate": "Bearer"})
-    else:
-        logger.info("User email matches system email")
-        return decode_token
