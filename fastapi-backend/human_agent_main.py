@@ -95,8 +95,20 @@ async def receive_text_message(websocket: WebSocket, timeout: float):
 
 async def close_policy(websocket: WebSocket, reason: str):
     logger.warning(f"Dashboard socket closed: {reason}")
-    await websocket.close(code=POLICY_VIOLATION)
-    logger.warning(f"Dashboard socket closed sent: {reason}")
+    # Short code for the browser, e.g. "auth_timeout", "invalid_token", "expired", "bad_message"
+    code = "bad_message" if reason.startswith(
+        "bad message") else reason.replace(" ", "_")
+    # 1. Tell the browser why (normal messages get through Render; close codes don't)
+    try:
+        await websocket.send_json({"type": "closing", "reason": code})
+    except Exception:
+        logger.info("Closing notice not delivered (browser already gone)")
+    # 2. Then close with 1008 as the standard signal
+    try:
+        await websocket.close(code=POLICY_VIOLATION)
+    except Exception:
+        logger.info("Close not delivered (browser already gone)")
+    logger.warning(f"Dashboard socket close sent: {reason}")
 
 
 @router.websocket("/agent/ws")
