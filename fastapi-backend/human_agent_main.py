@@ -14,7 +14,10 @@ from config import (
     FRONTEND_ORIGIN,
     AUTH_TIMEOUT_SECONDS,
     MAX_MESSAGE_CHARS,
-    POLICY_VIOLATION
+    POLICY_VIOLATION,
+    HEARTBEAT_TIMEOUT_SECONDS,
+    RATE_LIMIT_MESSAGES,
+    RATE_LIMIT_WINDOW_SECONDS
 )
 from online_agent import add_agent, remove_agent, online_count
 from datetime import datetime, timezone, timedelta
@@ -112,6 +115,24 @@ async def close_policy(websocket: WebSocket, reason: str):
     logger.warning(f"Dashboard socket close sent: {reason}")
 
 
+async def close_quietly(websocket: WebSocket, reason: str):
+    """Close WITHOUT a 'closing' message, so the dashboard reconnects instead of going to login.
+    Used for heartbeat timeout and for 'leaving'."""
+    logger.info(f"Dashboard socket closed: {reason}")
+    try:
+        await websocket.close()
+    except Exception:
+        logger.info("Close not delivered (browser already gone)")
+
+
+def message_type_for_log(message) -> str:
+    """Only the message type is ever logged (never the content, which could hold a token).
+    Cut to 30 characters and stripped of new lines so it cannot fake extra log lines."""
+    if isinstance(message, dict) and isinstance(message.get("type"), str):
+        return "".join(c for c in message["type"][:30] if c.isprintable())
+    return "(no type)"
+
+
 @router.websocket("/agent/ws")
 async def agent_websocket(websocket: WebSocket):
     # 1. Origin check, before accepting
@@ -150,18 +171,66 @@ async def agent_websocket(websocket: WebSocket):
 
         connection_id = add_agent(websocket)
 
-        # 7. Keep the socket open until the token expires
+        # 7. Main loop: heartbeat, message rules, expiry (piece 4)
+        recent_messages = []  # times of recent messages, for the rate limit
         while True:
             seconds_left = expires_at - time.time()
             if seconds_left <= 0:
                 await close_policy(websocket, "expired")
                 return
+
+            # Wait for the next message, up to 75 s or until the token expires (whichever is first).
+            # Decide BEFORE waiting which limit applies: checking the clock after the wait can be
+            # a few milliseconds early and would treat an expiry as a heartbeat timeout.
+            token_ends_first = seconds_left <= HEARTBEAT_TIMEOUT_SECONDS
             try:
-                await receive_text_message(websocket, seconds_left)
-                # Messages are ignored for now; ping and message rules come in piece 4
+                data = await receive_text_message(
+                    websocket, min(HEARTBEAT_TIMEOUT_SECONDS, seconds_left))
             except asyncio.TimeoutError:
-                await close_policy(websocket, "expired")
+                if token_ends_first:
+                    # -> login
+                    await close_policy(websocket, "expired")
+                else:
+                    # -> dashboard reconnects
+                    await close_quietly(websocket, "heartbeat timeout")
                 return
+
+            # Rate limit: more than 10 messages in 10 s (pings count too)
+            now = time.monotonic()
+            recent_messages = [t for t in recent_messages
+                               if now - t < RATE_LIMIT_WINDOW_SECONDS]
+            recent_messages.append(now)
+            if len(recent_messages) > RATE_LIMIT_MESSAGES:
+                await close_policy(websocket, "bad message (rate limit)")
+                return
+
+            # Size and format checks
+            if data is None:
+                await close_policy(websocket, "bad message (not text)")
+                return
+            if len(data) > MAX_MESSAGE_CHARS:
+                await close_policy(websocket, "bad message (too large)")
+                return
+            try:
+                message = json.loads(data)
+            except json.JSONDecodeError:
+                logger.info("Dashboard message ignored: not JSON")
+                continue
+
+            # Allowed types after auth: ping and leaving. Everything else is ignored.
+            message_type = message.get("type") if isinstance(
+                message, dict) else None
+            if message_type == "ping":
+                await websocket.send_json({"type": "pong"})
+            elif message_type == "leaving":
+                logger.info("Dashboard leaving")
+                # off the list at once (no ~10 s Render delay)
+                remove_agent(connection_id)
+                await close_quietly(websocket, "dashboard leaving")
+                return
+            else:
+                logger.info(
+                    f"Dashboard message ignored: type {message_type_for_log(message)}")
 
     except asyncio.TimeoutError:
         await close_policy(websocket, "auth timeout")
@@ -175,9 +244,8 @@ async def agent_websocket(websocket: WebSocket):
         if connection_id is not None:
             remove_agent(connection_id)
 
-# TEST ONLY
 
-
+# TEST ONLY - remove before launch (used for 3b piece 3/4 and 3c tests)
 @router.get("/agent/online-count")
 def get_online_count(guard=Depends(secure_route)):
     return {"count": online_count()}
