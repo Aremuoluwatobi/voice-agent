@@ -26,8 +26,7 @@ let isSubmitting = false;
 
 // ---------- Helpers other files can use (main.js, api.js) ----------
 
-// Show a message under the Sign in button. type: "error" | "info".
-// Pass "" as text to clear it. Uses textContent only (never innerHTML).
+
 export function setLoginStatus(text, type = "info") {
     const message = document.getElementById("login-message");
     if (!message) return;
