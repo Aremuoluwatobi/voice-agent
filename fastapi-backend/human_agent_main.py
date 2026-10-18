@@ -96,6 +96,7 @@ async def receive_text_message(websocket: WebSocket, timeout: float):
 async def close_policy(websocket: WebSocket, reason: str):
     logger.warning(f"Dashboard socket closed: {reason}")
     await websocket.close(code=POLICY_VIOLATION)
+    logger.warning(f"Dashboard socket closed sent: {reason}")
 
 
 @router.websocket("/agent/ws")
