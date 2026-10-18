@@ -179,9 +179,6 @@ async def agent_websocket(websocket: WebSocket):
                 await close_policy(websocket, "expired")
                 return
 
-            # Wait for the next message, up to 75 s or until the token expires (whichever is first).
-            # Decide BEFORE waiting which limit applies: checking the clock after the wait can be
-            # a few milliseconds early and would treat an expiry as a heartbeat timeout.
             token_ends_first = seconds_left <= HEARTBEAT_TIMEOUT_SECONDS
             try:
                 data = await receive_text_message(
