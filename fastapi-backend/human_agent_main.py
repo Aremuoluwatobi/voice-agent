@@ -16,6 +16,7 @@ from config import (
     MAX_MESSAGE_CHARS,
     POLICY_VIOLATION
 )
+from online_agent import add_agent, remove_agent, online_count
 from datetime import datetime, timezone, timedelta
 from pydantic import BaseModel
 from route_gaurd import secure_route
@@ -122,6 +123,8 @@ async def agent_websocket(websocket: WebSocket):
     # 2. Accept
     await websocket.accept()
 
+    connection_id = None
+
     try:
         # 3. First message within 5 seconds
         data = await receive_text_message(websocket, AUTH_TIMEOUT_SECONDS)
@@ -145,6 +148,8 @@ async def agent_websocket(websocket: WebSocket):
         # 6. Success
         await websocket.send_json({"type": "ok"})
 
+        connection_id = add_agent(websocket)
+
         # 7. Keep the socket open until the token expires
         while True:
             seconds_left = expires_at - time.time()
@@ -166,3 +171,13 @@ async def agent_websocket(websocket: WebSocket):
         await close_policy(websocket, "invalid token")
     except WebSocketDisconnect:
         return
+    finally:
+        if connection_id is not None:
+            remove_agent(connection_id)
+
+# TEST ONLY
+
+
+@router.get("/agent/online-count")
+def get_online_count(guard=Depends(secure_route)):
+    return {"count": online_count()}
