@@ -1,21 +1,16 @@
-// Dashboard WebSocket (step 3b, piece 5).
-// This file only talks to the server and reports what happened.
-// It never changes the view or the top bar: main.js decides what each event means.
+
 import { API_BASE_URL, AGENT_WS_PATH, PING_INTERVAL_MS } from "./config.js";
 
-// https://... -> wss://...  (http://... -> ws://... for local tests)
+
 const WS_URL = API_BASE_URL.replace(/^http/, "ws") + AGENT_WS_PATH;
 const POLICY_VIOLATION = 1008;
 
-let socket = null;      // the current WebSocket (open or connecting), or null
-let authorised = false; // true once the server has sent {"type":"ok"}
-let pingTimer = null;   // the 30 s heartbeat timer, or null
-let handlers = {};      // callbacks given by main.js
+let socket = null;
+let authorised = false;
+let pingTimer = null;
+let handlers = {};
 
-// Call once from main.js, next to the other init calls.
-//   onOnline()          -> the server accepted the token
-//   onRejected(reason)  -> closing message or 1008: login, never reconnect (step 3)
-//   onDropped(code)     -> any other drop: check GET /agent/dashboard, then reconnect (step 4)
+
 export function initAgentSocket({ onOnline, onRejected, onDropped } = {}) {
     handlers = { onOnline, onRejected, onDropped };
     // Tab closing / leaving the page: tell the server at once (decision v24)
@@ -61,10 +56,9 @@ export function startAgentSocket(token) {
             startPing(ws);
             report("onOnline");
         } else if (message.type === "pong") {
-            // Heartbeat answer: nothing to do (the ping itself keeps us on the list)
+
         } else if (message.type === "closing") {
-            // Rule v23: close the socket ourselves at once (Render drops the
-            // server's close, which would otherwise arrive ~20 s later as 1006).
+
             const reason = typeof message.reason === "string" ? message.reason : "unknown";
             forget();
             try { ws.close(1000); } catch { /* already closed */ }
@@ -83,9 +77,7 @@ export function startAgentSocket(token) {
     };
 }
 
-// Planned close (Log out, page closing, going to login).
-// Sends "leaving" first so the server removes the dashboard at once (decision v24).
-// No event is reported to main.js.
+
 export function stopAgentSocket() {
     const ws = socket;
     const wasAuthorised = authorised;
@@ -102,8 +94,7 @@ export function stopAgentSocket() {
     }
 }
 
-// Heartbeat: one {"type":"ping"} every 30 s, only after ok (decision v24).
-// The server drops a dashboard after 75 s of silence, so two pings fit in that window.
+
 function startPing(ws) {
     stopPing();
     pingTimer = setInterval(() => {
