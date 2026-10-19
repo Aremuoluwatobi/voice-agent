@@ -12,6 +12,8 @@ from config import (
 from config import redis
 from fastapi.middleware.cors import CORSMiddleware
 from human_agent_main import router
+from handoff import router as handoff_router
+
 
 from logger_s import get_logger
 
@@ -20,6 +22,7 @@ logger = get_logger(__name__)
 
 app = FastAPI()
 app.include_router(router)
+app.include_router(handoff_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[FRONTEND_ORIGIN],

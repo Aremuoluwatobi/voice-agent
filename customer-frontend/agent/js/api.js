@@ -6,7 +6,7 @@ import { API_BASE_URL, SLOW_NOTICE_MS, REQUEST_TIMEOUT_MS } from "./config.js";
 import { getToken, clearToken, isTokenExpired } from "./auth.js";
 import { showView, getCurrentView, setAgentStatus } from "./views.js";
 import { setLoginStatus } from "./login.js";
-import { stopAgentSocket } from "./agent-socket.js";
+import { stopAgentSocket } from "./agent_socket.js";
 
 const SESSION_ENDED_MESSAGE = "Your session has ended. Please sign in again.";
 const CALL_NOTICE_TEXT = "Session expired. Log in again after this call.";
