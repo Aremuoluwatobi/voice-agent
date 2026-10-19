@@ -21,7 +21,7 @@ import { initSound, refreshSoundButton } from "./sound.js";
 import { initIncoming, hideIncomingCall, clearDeclinedCalls } from "./incoming.js";
 import { initTranscript, clearTranscript } from "./call-transcript.js";
 import { initHandoff, clearHandoff } from "./call-handoff.js";
-import { initAgentSocket, startAgentSocket, stopAgentSocket } from "./agent-socket.js";
+import { initAgentSocket, startAgentSocket, stopAgentSocket } from "./agent_socket.js";
 
 
 // ---------- Sound (ring + "Click to enable sound" button) ----------
