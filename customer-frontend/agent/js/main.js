@@ -16,19 +16,20 @@ import {
   clearToken,
   isTokenExpired,
 } from "./auth.js";
-import { apiFetch } from "./api.js";
+import { apiFetch, endSession, isSessionEnded, clearSessionEnded } from "./api.js";
 import { initSound, refreshSoundButton } from "./sound.js";
 import { initIncoming, hideIncomingCall, clearDeclinedCalls } from "./incoming.js";
 import { initTranscript, clearTranscript } from "./call-transcript.js";
 import { initHandoff, clearHandoff } from "./call-handoff.js";
-import { initAgentSocket, startAgentSocket, stopAgentSocket } from "./agent_socket.js";
+import { initAgentSocket, startAgentSocket, stopAgentSocket } from "./agent-socket.js";
 
 
 // ---------- Sound (ring + "Click to enable sound" button) ----------
 initSound();
 
 
-// ---------- Dashboard socket ----------
+// ---------- Dashboard socket (3b piece 5) ----------
+// "Online" only shows after the server's {"type":"ok"}.
 const SESSION_ENDED_MESSAGE = "Your session has ended. Please sign in again.";
 const SIGN_IN_AGAIN_MESSAGE = "Please sign in again.";
 
@@ -38,33 +39,40 @@ initAgentSocket({
     setAgentStatus("Online", "online");
   },
 
+  // Step 3: the server rejected the socket (closing message, or 1008 as backup).
+  // Never reconnect. The socket is already closed by agent-socket.js.
+  // Step 5: only "expired" on the call view keeps the call; anything else -> login.
   onRejected: (reason) => {
     resetReconnect();
-    clearToken();
-    showView("login"); // runs the login clean-up listener below
-    setLoginStatus(
+    endSession(
       reason === "expired" ? SESSION_ENDED_MESSAGE : SIGN_IN_AGAIN_MESSAGE,
-      "info"
+      reason
     );
   },
 
-
+  // Step 4: any other drop (1006, Render deploy, Wi-Fi, 75 s heartbeat close).
+  // Wait, check GET /agent/dashboard, then reconnect.
   onDropped: () => scheduleReconnect(),
 });
 
 
-// ---------- Reconnect ----------
-let reconnectTimer = null;
-let reconnectAttempt = 0;
-let checkInFlight = false;
+// ---------- Reconnect (3b piece 5, step 4) ----------
+// Doubling waits with jitter: about 1, 2, 4, 8, 16 s, then 30 s max.
+// Only one wait at a time. Never after Log out, a rejection, or on the login view.
+let reconnectTimer = null;  // the pending wait, or null
+let reconnectAttempt = 0;   // how many waits since the last "Online"
+let checkInFlight = false;  // a GET /agent/dashboard check is running
 
 function canReconnect() {
-  return hasToken() && getCurrentView() !== "login";
+  // Never after the session ended during a call (no "Reconnecting…", decision v25)
+  return hasToken() && getCurrentView() !== "login" && !isSessionEnded();
 }
 
 function nextReconnectDelay() {
   const base = Math.min(RECONNECT_MAX_MS, RECONNECT_BASE_MS * 2 ** reconnectAttempt);
   reconnectAttempt += 1;
+  // Jitter: each wait is 80–120% of the base (capped at the max), so dashboards
+  // dropped by the same Render deploy don't all retry at the same moment.
   const jittered = base * (0.8 + Math.random() * 0.4);
   return Math.round(Math.min(RECONNECT_MAX_MS, jittered));
 }
@@ -81,11 +89,10 @@ async function tryReconnect() {
   if (!canReconnect()) return;
 
   // Expired while offline (e.g. laptop closed): no need to ask the server.
+  // A normal expiry: stays on the call view, login anywhere else.
   if (isTokenExpired(getToken())) {
     resetReconnect();
-    clearToken();
-    showView("login");
-    setLoginStatus(SESSION_ENDED_MESSAGE, "info");
+    endSession(SESSION_ENDED_MESSAGE, "expired");
     return;
   }
 
@@ -106,7 +113,7 @@ async function tryReconnect() {
     return;
   }
 
-  // 2b. 401 / no token → api.js has already cleared the token and shown login.
+  // 2b. 401 / no token → api.js has already handled it (login, or call notice).
   if (result.reason === "unauthorized" || result.reason === "no-token") {
     resetReconnect();
     return;
@@ -135,6 +142,7 @@ onViewChange((name) => {
   if (name !== "login") return;
   resetReconnect();    // cancel any pending reconnect wait
   stopAgentSocket();   // sends "leaving" (if online), then closes; never reconnects
+  clearSessionEnded(); // reset the "session ended" flag and hide the call notice
   clearTranscript();
   clearHandoff();
   const helperSearch = document.getElementById("call-helper-search");
@@ -178,6 +186,8 @@ if (logoutButton) {
 }
 
 // ---------- On page open (and after login) ----------
+// All views start hidden in the HTML, so nothing flashes.
+// (Unchanged by step 5: a refresh drops the LiveKit room anyway, decision v25.)
 async function checkSession() {
   // 1. No token → login
   if (!hasToken()) {
@@ -204,7 +214,8 @@ async function checkSession() {
   });
 
   if (result.ok) {
-
+    // Token confirmed → open the socket. "Online" comes from onOnline.
+    // If the agent logged out while waiting, getToken() is empty and nothing opens.
     setAgentStatus("Connecting…", "checking");
     startAgentSocket(getToken());
     return;

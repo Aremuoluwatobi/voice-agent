@@ -668,14 +668,24 @@ p {
     pointer-events: none;
 }
 
-/* empty-state text for captions  and helper results .
-.view-call .call-placeholder {
-  margin: 0;
-  font-size: 0.9rem;
-  color: var(--call-muted);
-}
 
 /* the results box has a grey background: hide it while it has no rows */
 .call-helper-results:empty {
+    display: none;
+}
+
+/*"Session expired" notice on the call view */
+.call-session-notice {
+    margin: 0;
+    padding: 10px 14px;
+    border: 1px solid #F5C26B;
+    border-radius: 8px;
+    background: #FFF6E5;
+    color: #8A5300;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.call-session-notice[hidden] {
     display: none;
 }
