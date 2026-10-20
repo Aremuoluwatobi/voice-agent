@@ -83,9 +83,6 @@ export function startAgentSocket(token) {
 
 
 
-
-
-
 export function stopAgentSocket() {
     const ws = socket;
     const wasAuthorised = authorised;

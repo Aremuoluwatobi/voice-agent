@@ -134,7 +134,6 @@
                 </div>
 
                 <p id="incoming-summary" class="incoming-summary"></p>
-                <p id="incoming-order" class="incoming-order" hidden></p>
 
                 <div class="incoming-actions">
                     <button type="button" id="incoming-decline" class="btn-decline">
@@ -178,24 +177,8 @@
                 </div>
 
                 <h2 class="call-subtitle">Customer handoff</h2>
-                <dl class="call-facts">
-                    <div class="call-fact">
-                        <dt>Order ID</dt>
-                        <dd id="call-order-id">—</dd>
-                    </div>
-                    <div class="call-fact">
-                        <dt>Product</dt>
-                        <dd id="call-product">—</dd>
-                    </div>
-                    <div class="call-fact">
-                        <dt>Complaint</dt>
-                        <dd id="call-complaint">—</dd>
-                    </div>
-                    <div class="call-fact">
-                        <dt>Agent already told customer</dt>
-                        <dd id="call-told">—</dd>
-                    </div>
-                </dl>
+                <div id="call-summary" class="call-scroll call-summary" tabindex="0" aria-label="Customer summary">No
+                    summary yet</div>
             </div>
 
             <!-- 2. The three panels -->
@@ -262,7 +245,7 @@
                                 <input id="call-helper-search" type="search" placeholder="Find the return policy…"
                                     autocomplete="off">
                             </label>
-                            <p class="call-helper-note">Retrieved from DB, email, and Google Docs</p>
+                            <p class="call-helper-note">Retrieved from Shopdarret docs</p>
 
                             <!-- Keep EMPTY in the HTML: results come in Phase 9 -->
                             <ul id="call-helper-results" class="call-helper-results"></ul>

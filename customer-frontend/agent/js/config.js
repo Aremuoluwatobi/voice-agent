@@ -34,4 +34,3 @@ export const ICON_EYE_OFF = "/agent/icons/PLACEHOLDER_EYE_OFF.svg";
 export const INCOMING_TIMEOUT_MS = 30000;
 export const RING_INTERVAL_MS = 2500;
 export const SUMMARY_MAX_CHARS = 200;
-export const ORDER_ID_MAX_CHARS = 40;

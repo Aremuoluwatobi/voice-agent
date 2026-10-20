@@ -1,58 +1,58 @@
 // /agent/js/call-handoff.js
+// Customer handoff summary + suggested resolution in the active call view.
+// The HTML holds no customer data: both values start as an empty-state text
+// and are only filled by showHandoff(card). All text goes in with textContent.
+//
+// card = {
+//   summary:              "...",  // from the handoff card the backend saves
+//   suggested_resolution: "...",  // optional
+// }
+// Scores (RAGAS / order match) are NOT handled here (Phases 5-6).
 
-const EMPTY = "—";
+const SUMMARY_ID = "call-summary";
+const RESOLUTION_ID = "call-resolution";
+const NO_SUMMARY = "No summary yet";
 const NO_RESOLUTION = "No suggestion yet";
+const MAX_SUMMARY = 2000;      // safety cap only; the box scrolls
+const MAX_RESOLUTION = 300;
 
-const FIELDS = [
-    { key: "product", id: "call-product", max: 120, fallback: EMPTY },
-    { key: "complaint", id: "call-complaint", max: 300, fallback: EMPTY },
-    { key: "agent_told", id: "call-told", max: 300, fallback: EMPTY },
-    { key: "suggested_resolution", id: "call-resolution", max: 300, fallback: NO_RESOLUTION },
-];
-const ORDER_ID_ELEMENT = "call-order-id";
-const ALL_IDS = [ORDER_ID_ELEMENT, ...FIELDS.map((f) => f.id)];
-
-// collapse spaces/new lines, trim, cut long text with "…"
+// collapse spaces/new lines, trim, cut very long text with "…"
 function clean(value, max) {
     if (typeof value !== "string") return "";
     const text = value.replace(/\s+/g, " ").trim();
     return text.length > max ? text.slice(0, max - 1).trimEnd() + "…" : text;
 }
 
-// same rule as the popup: leading # removed, cut at 40, shown as "#<id>"
-function cleanOrderId(value) {
-    if (typeof value !== "string") return "";
-    const id = value.replace(/\s+/g, " ").trim().replace(/^#+/, "").trim().slice(0, 40);
-    return id ? "#" + id : "";
-}
-
 function setText(id, text, fallback) {
     const el = document.getElementById(id);
     if (!el) return false;
     el.textContent = text || fallback;
+    el.scrollTop = 0;            // a new card always opens at the top
     return true;
 }
 
 // Call once (from main.js) after the page loads.
 export function initHandoff() {
-    const allFound = ALL_IDS.every((id) => document.getElementById(id));
-    if (!allFound) return false;
+    if (!document.getElementById(SUMMARY_ID)) return false;
+    if (!document.getElementById(RESOLUTION_ID)) return false;
     clearHandoff();
     return true;
 }
 
-// Fill the card. Missing or empty fields show "—" (or "No suggestion yet").
+// Fill the card. Missing or empty values show the empty-state text.
 export function showHandoff(card) {
     if (!card || typeof card !== "object") return false;
-    let ok = setText(ORDER_ID_ELEMENT, cleanOrderId(card.order_id), EMPTY);
-    for (const f of FIELDS) {
-        ok = setText(f.id, clean(card[f.key], f.max), f.fallback) && ok;
-    }
-    return ok;
+    const summaryOk = setText(SUMMARY_ID, clean(card.summary, MAX_SUMMARY), NO_SUMMARY);
+    const resolutionOk = setText(
+        RESOLUTION_ID,
+        clean(card.suggested_resolution, MAX_RESOLUTION),
+        NO_RESOLUTION
+    );
+    return summaryOk && resolutionOk;
 }
 
 // Back to the empty state (start of a new call / End call).
 export function clearHandoff() {
-    setText(ORDER_ID_ELEMENT, "", EMPTY);
-    for (const f of FIELDS) setText(f.id, "", f.fallback);
+    setText(SUMMARY_ID, "", NO_SUMMARY);
+    setText(RESOLUTION_ID, "", NO_RESOLUTION);
 }

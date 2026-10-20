@@ -5,7 +5,6 @@
 import {
     INCOMING_TIMEOUT_MS,
     SUMMARY_MAX_CHARS,
-    ORDER_ID_MAX_CHARS,
 } from "./config.js";
 import { getCurrentView, onViewChange } from "./views.js";
 import { startRinging, stopRinging } from "./sound.js";
@@ -72,25 +71,16 @@ export function showIncomingCall(alert) {
     if (currentAlert && currentAlert.handoffId === handoffId) return true;
 
     const summary = cleanText(alert.summary, SUMMARY_MAX_CHARS) || FALLBACK_SUMMARY;
-    const orderId = cleanText(alert.order_id, ORDER_ID_MAX_CHARS).replace(/^#+/, "");
 
     const popup = document.getElementById("incoming-call");
     const summaryText = document.getElementById("incoming-summary");
-    const orderText = document.getElementById("incoming-order");
-    if (!popup || !summaryText || !orderText) return false;
+    if (!popup || !summaryText) return false;
 
     summaryText.textContent = summary;
-    if (orderId) {
-        orderText.textContent = `Order #${orderId}`;
-        orderText.hidden = false;
-    } else {
-        orderText.textContent = "";
-        orderText.hidden = true;
-    }
 
     setButtonsDisabled(false);
     popup.hidden = false;
-    currentAlert = { handoffId, summary, orderId };
+    currentAlert = { handoffId, summary };
 
     startRinging(); // silent if the browser is still blocking sound
 
