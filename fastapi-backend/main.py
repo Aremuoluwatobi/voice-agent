@@ -1,20 +1,20 @@
-from fastapi import FastAPI, HTTPException
+import json
 import uuid
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from livekit import api
+
 from config import (
     LIVEKIT_API_SECRET,
     LIVEKIT_API_KEY,
     LIVEKIT_URL,
     FRONTEND_ORIGIN,
     CALL_LOCK_KEY,
-    LOCK_TIMEOUT_SECONDS
+    LOCK_TIMEOUT_SECONDS,
 )
 from config import redis
-from fastapi.middleware.cors import CORSMiddleware
 from human_agent_main import router
 from handoff import router as handoff_router
-
-
 from logger_s import get_logger
 
 
@@ -31,10 +31,6 @@ app.add_middleware(
 )
 
 
-CALL_LOCK_KEY = CALL_LOCK_KEY
-LOCK_TIMEOUT_SECONDS = LOCK_TIMEOUT_SECONDS
-
-
 @app.get("/health")
 def check_health():
     return {"status": "working fine"}
@@ -45,7 +41,7 @@ async def create_token():
 
     user_id = f"customer-{uuid.uuid4().hex[:8]}"
 
-    # lock room if empty
+    # lock room if empty (the lock's value is this customer's user_id)
     locked = await redis.set(CALL_LOCK_KEY, user_id, ex=LOCK_TIMEOUT_SECONDS, nx=True)
     if not locked:
         raise HTTPException(
@@ -61,7 +57,13 @@ async def create_token():
             .with_room_config(
                 api.RoomConfiguration(
                     departure_timeout=20,
-                    agents=[api.RoomAgentDispatch(agent_name="my-agent")],
+                    agents=[
+                        api.RoomAgentDispatch(
+                            agent_name="my-agent",
+                            # my-agent reads this to know which lock is its own
+                            metadata=json.dumps({"user_id": user_id}),
+                        )
+                    ],
                 )
             )
             .to_jwt()

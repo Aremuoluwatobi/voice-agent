@@ -1,0 +1,1057 @@
+[
+  {
+    "order_id": "48213-NG",
+    "customer": {
+      "first_name": "Adaeze",
+      "last_name": "Okafor",
+      "phone": "+234 801 000 4417",
+      "email": "adaeze.okafor@example.com"
+    },
+    "delivery": {
+      "method": "courier",
+      "city": "Ikeja",
+      "state": "Lagos",
+      "zone": "Lagos",
+      "status": "delivered",
+      "delivered_at": "2026-10-12"
+    },
+    "ordered_at": "2026-10-10",
+    "items": [
+      {
+        "sku": "SD-EB-200",
+        "name": "SoundDrop Wireless Earbuds",
+        "colour": "Black",
+        "qty": 1,
+        "unit_price_ngn": 38500
+      }
+    ],
+    "delivery_fee_ngn": 2500,
+    "total_ngn": 41000,
+    "payment": {
+      "method": "card",
+      "status": "paid"
+    },
+    "test_note": "MOCKUP ORDER: box crushed, earbuds don't charge (within 48 h on 10-13; damage batch 10–12 Oct)"
+  },
+  {
+    "order_id": "48214-NG",
+    "customer": {
+      "first_name": "Tunde",
+      "last_name": "Bakare",
+      "phone": "+234 801 000 2209",
+      "email": "tunde.bakare@example.com"
+    },
+    "delivery": {
+      "method": "courier",
+      "city": "Lekki",
+      "state": "Lagos",
+      "zone": "Lagos",
+      "status": "dispatched",
+      "delivered_at": null
+    },
+    "ordered_at": "2026-10-14",
+    "items": [
+      {
+        "sku": "SD-PB-20K",
+        "name": "PowerCell 20,000 mAh PD Power Bank",
+        "colour": "Black",
+        "qty": 1,
+        "unit_price_ngn": 29900
+      }
+    ],
+    "delivery_fee_ngn": 2500,
+    "total_ngn": 32400,
+    "payment": {
+      "method": "card",
+      "status": "paid"
+    },
+    "test_note": "Normal in-transit status question"
+  },
+  {
+    "order_id": "48215-NG",
+    "customer": {
+      "first_name": "Chiamaka",
+      "last_name": "Eze",
+      "phone": "+234 801 000 7731",
+      "email": "chiamaka.eze@example.com"
+    },
+    "delivery": {
+      "method": "courier",
+      "city": "Enugu",
+      "state": "Enugu",
+      "zone": "Other",
+      "status": "delayed",
+      "delivered_at": null
+    },
+    "ordered_at": "2026-10-03",
+    "items": [
+      {
+        "sku": "SD-SW-100",
+        "name": "PulseFit Smartwatch",
+        "colour": "Rose",
+        "qty": 1,
+        "unit_price_ngn": 45000
+      }
+    ],
+    "delivery_fee_ngn": 5500,
+    "total_ngn": 50500,
+    "payment": {
+      "method": "transfer",
+      "status": "paid"
+    },
+    "test_note": "Delayed: estimate was 2026-10-09; delivery-fee refund eligible"
+  },
+  {
+    "order_id": "48216-NG",
+    "customer": {
+      "first_name": "Ibrahim",
+      "last_name": "Musa",
+      "phone": "+234 801 000 5120",
+      "email": "ibrahim.musa@example.com"
+    },
+    "delivery": {
+      "method": "courier",
+      "city": "Kano",
+      "state": "Kano",
+      "zone": "Other",
+      "status": "processing",
+      "delivered_at": null
+    },
+    "ordered_at": "2026-10-15",
+    "items": [
+      {
+        "sku": "SD-HP-500",
+        "name": "BassLine Over-Ear Headphones",
+        "colour": "Navy",
+        "qty": 1,
+        "unit_price_ngn": 52000
+      }
+    ],
+    "delivery_fee_ngn": 5500,
+    "total_ngn": 57500,
+    "payment": {
+      "method": "card",
+      "status": "paid"
+    },
+    "test_note": "Can still cancel / change address"
+  },
+  {
+    "order_id": "48217-NG",
+    "customer": {
+      "first_name": "Funmi",
+      "last_name": "Adeyemi",
+      "phone": "+234 801 000 3348",
+      "email": "funmi.adeyemi@example.com"
+    },
+    "delivery": {
+      "method": "courier",
+      "city": "Ibadan",
+      "state": "Oyo",
+      "zone": "South-West",
+      "status": "delivered",
+      "delivered_at": "2026-09-23"
+    },
+    "ordered_at": "2026-09-20",
+    "items": [
+      {
+        "sku": "SD-EB-350",
+        "name": "SoundDrop Pro ANC Earbuds",
+        "colour": "Black",
+        "qty": 1,
+        "unit_price_ngn": 64000
+      }
+    ],
+    "delivery_fee_ngn": 4000,
+    "total_ngn": 68000,
+    "payment": {
+      "method": "card",
+      "status": "paid"
+    },
+    "test_note": "Past 7-day return window; within 12-month warranty"
+  },
+  {
+    "order_id": "48218-NG",
+    "customer": {
+      "first_name": "Emeka",
+      "last_name": "Obi",
+      "phone": "+234 801 000 9902",
+      "email": "emeka.obi@example.com"
+    },
+    "delivery": {
+      "method": "courier",
+      "city": "Port Harcourt",
+      "state": "Rivers",
+      "zone": "Other",
+      "status": "delivered",
+      "delivered_at": "2026-10-05"
+    },
+    "ordered_at": "2026-10-01",
+    "items": [
+      {
+        "sku": "SD-CH-20W",
+        "name": "QuickCharge 20 W USB-C Charger",
+        "colour": "White",
+        "qty": 1,
+        "unit_price_ngn": 9500
+      },
+      {
+        "sku": "SD-CB-C2C",
+        "name": "USB-C to USB-C Cable, 1 m",
+        "colour": "White",
+        "qty": 1,
+        "unit_price_ngn": 4500
+      }
+    ],
+    "delivery_fee_ngn": 5500,
+    "total_ngn": 19500,
+    "payment": {
+      "method": "card",
+      "status": "paid"
+    },
+    "test_note": "Asks why charger has no cable (FAQ)"
+  },
+  {
+    "order_id": "48219-NG",
+    "customer": {
+      "first_name": "Adaeze",
+      "last_name": "Okafor",
+      "phone": "+234 801 000 4417",
+      "email": "adaeze.okafor@example.com"
+    },
+    "delivery": {
+      "method": "courier",
+      "city": "Ikeja",
+      "state": "Lagos",
+      "zone": "Lagos",
+      "status": "dispatched",
+      "delivered_at": null
+    },
+    "ordered_at": "2026-10-13",
+    "items": [
+      {
+        "sku": "SD-CS-I15",
+        "name": "ClearGuard Shockproof Case, iPhone 15",
+        "colour": "Clear",
+        "qty": 1,
+        "unit_price_ngn": 7500
+      }
+    ],
+    "delivery_fee_ngn": 2500,
+    "total_ngn": 10000,
+    "payment": {
+      "method": "pod",
+      "status": "paid"
+    },
+    "test_note": "SECOND order for the same customer → disambiguation"
+  },
+  {
+    "order_id": "48220-NG",
+    "customer": {
+      "first_name": "Zainab",
+      "last_name": "Bello",
+      "phone": "+234 801 000 6610",
+      "email": "zainab.bello@example.com"
+    },
+    "delivery": {
+      "method": "courier",
+      "city": "Abuja",
+      "state": "FCT",
+      "zone": "Other",
+      "status": "delivered",
+      "delivered_at": "2026-10-14"
+    },
+    "ordered_at": "2026-10-08",
+    "items": [
+      {
+        "sku": "SD-SP-300",
+        "name": "BoomBox Mini Bluetooth Speaker",
+        "colour": "Blue",
+        "qty": 2,
+        "unit_price_ngn": 27000
+      }
+    ],
+    "delivery_fee_ngn": 5500,
+    "total_ngn": 59500,
+    "payment": {
+      "method": "card",
+      "status": "paid"
+    },
+    "test_note": "Stereo pairing question"
+  },
+  {
+    "order_id": "48221-NG",
+    "customer": {
+      "first_name": "Kelechi",
+      "last_name": "Nwosu",
+      "phone": "+234 801 000 1185",
+      "email": "kelechi.nwosu@example.com"
+    },
+    "delivery": {
+      "method": "courier",
+      "city": "Surulere",
+      "state": "Lagos",
+      "zone": "Lagos",
+      "status": "delivered",
+      "delivered_at": "2026-10-12"
+    },
+    "ordered_at": "2026-10-11",
+    "items": [
+      {
+        "sku": "SD-EB-200",
+        "name": "SoundDrop Wireless Earbuds",
+        "colour": "White",
+        "qty": 1,
+        "unit_price_ngn": 38500
+      }
+    ],
+    "delivery_fee_ngn": 2500,
+    "total_ngn": 41000,
+    "payment": {
+      "method": "card",
+      "status": "paid"
+    },
+    "test_note": "Damage batch; reports on 10-15 → OUTSIDE 48 h → warranty route"
+  },
+  {
+    "order_id": "48222-NG",
+    "customer": {
+      "first_name": "Bisi",
+      "last_name": "Ogunleye",
+      "phone": "+234 801 000 4073",
+      "email": "bisi.ogunleye@example.com"
+    },
+    "delivery": {
+      "method": "courier",
+      "city": "Abeokuta",
+      "state": "Ogun",
+      "zone": "South-West",
+      "status": "failed_delivery",
+      "delivered_at": null
+    },
+    "ordered_at": "2026-10-09",
+    "items": [
+      {
+        "sku": "SD-PB-10K",
+        "name": "PowerCell 10,000 mAh Power Bank",
+        "colour": "Black",
+        "qty": 1,
+        "unit_price_ngn": 18500
+      }
+    ],
+    "delivery_fee_ngn": 4000,
+    "total_ngn": 22500,
+    "payment": {
+      "method": "transfer",
+      "status": "paid"
+    },
+    "test_note": "Two failed attempts; returned to warehouse"
+  },
+  {
+    "order_id": "48223-NG",
+    "customer": {
+      "first_name": "Samuel",
+      "last_name": "Okon",
+      "phone": "+234 801 000 8854",
+      "email": "samuel.okon@example.com"
+    },
+    "delivery": {
+      "method": "courier",
+      "city": "Uyo",
+      "state": "Akwa Ibom",
+      "zone": "Other",
+      "status": "cancelled",
+      "delivered_at": null
+    },
+    "ordered_at": "2026-10-02",
+    "items": [
+      {
+        "sku": "SD-TR-01",
+        "name": "Creator Tripod with Ring Light",
+        "colour": "Black",
+        "qty": 1,
+        "unit_price_ngn": 15000
+      }
+    ],
+    "delivery_fee_ngn": 5500,
+    "total_ngn": 20500,
+    "payment": {
+      "method": "card",
+      "status": "refunded"
+    },
+    "test_note": "Cancelled before dispatch; refund processed 2026-10-04"
+  },
+  {
+    "order_id": "48224-NG",
+    "customer": {
+      "first_name": "Grace",
+      "last_name": "Ajayi",
+      "phone": "+234 801 000 2296",
+      "email": "grace.ajayi@example.com"
+    },
+    "delivery": {
+      "method": "courier",
+      "city": "Yaba",
+      "state": "Lagos",
+      "zone": "Lagos",
+      "status": "delivered",
+      "delivered_at": "2026-10-13"
+    },
+    "ordered_at": "2026-10-12",
+    "items": [
+      {
+        "sku": "SD-EB-350",
+        "name": "SoundDrop Pro ANC Earbuds",
+        "colour": "Black",
+        "qty": 1,
+        "unit_price_ngn": 64000
+      },
+      {
+        "sku": "SD-CB-C2C",
+        "name": "USB-C to USB-C Cable, 1 m",
+        "colour": "White",
+        "qty": 1,
+        "unit_price_ngn": 4500
+      }
+    ],
+    "delivery_fee_ngn": 0,
+    "total_ngn": 68500,
+    "payment": {
+      "method": "card",
+      "status": "paid"
+    },
+    "test_note": "Charged twice claim → handoff"
+  },
+  {
+    "order_id": "48225-NG",
+    "customer": {
+      "first_name": "Musa",
+      "last_name": "Abdullahi",
+      "phone": "+234 801 000 7402",
+      "email": "musa.abdullahi@example.com"
+    },
+    "delivery": {
+      "method": "courier",
+      "city": "Kaduna",
+      "state": "Kaduna",
+      "zone": "Other",
+      "status": "delivered",
+      "delivered_at": "2026-10-10"
+    },
+    "ordered_at": "2026-10-06",
+    "items": [
+      {
+        "sku": "SD-SW-100",
+        "name": "PulseFit Smartwatch",
+        "colour": "Black",
+        "qty": 1,
+        "unit_price_ngn": 45000
+      }
+    ],
+    "delivery_fee_ngn": 5500,
+    "total_ngn": 50500,
+    "payment": {
+      "method": "card",
+      "status": "paid"
+    },
+    "test_note": "Watch not syncing (FAQ)"
+  },
+  {
+    "order_id": "48226-NG",
+    "customer": {
+      "first_name": "Ngozi",
+      "last_name": "Umeh",
+      "phone": "+234 801 000 3019",
+      "email": "ngozi.umeh@example.com"
+    },
+    "delivery": {
+      "method": "courier",
+      "city": "Ikoyi",
+      "state": "Lagos",
+      "zone": "Lagos",
+      "status": "processing",
+      "delivered_at": null
+    },
+    "ordered_at": "2026-10-15",
+    "items": [
+      {
+        "sku": "SD-HP-500",
+        "name": "BassLine Over-Ear Headphones",
+        "colour": "Black",
+        "qty": 1,
+        "unit_price_ngn": 52000
+      },
+      {
+        "sku": "SD-SP-300",
+        "name": "BoomBox Mini Bluetooth Speaker",
+        "colour": "Black",
+        "qty": 1,
+        "unit_price_ngn": 27000
+      }
+    ],
+    "delivery_fee_ngn": 0,
+    "total_ngn": 79000,
+    "payment": {
+      "method": "card",
+      "status": "paid"
+    },
+    "test_note": "Wants to change colour before dispatch"
+  },
+  {
+    "order_id": "48227-NG",
+    "customer": {
+      "first_name": "Daniel",
+      "last_name": "Okoro",
+      "phone": "+234 801 000 5567",
+      "email": "daniel.okoro@example.com"
+    },
+    "delivery": {
+      "method": "courier",
+      "city": "Benin City",
+      "state": "Edo",
+      "zone": "Other",
+      "status": "returned",
+      "delivered_at": "2026-10-02"
+    },
+    "ordered_at": "2026-09-28",
+    "items": [
+      {
+        "sku": "SD-PB-20K",
+        "name": "PowerCell 20,000 mAh PD Power Bank",
+        "colour": "Grey",
+        "qty": 1,
+        "unit_price_ngn": 29900
+      }
+    ],
+    "delivery_fee_ngn": 5500,
+    "total_ngn": 35400,
+    "payment": {
+      "method": "card",
+      "status": "paid"
+    },
+    "test_note": "Change-of-mind return received; refund pending human approval"
+  },
+  {
+    "order_id": "48228-NG",
+    "customer": {
+      "first_name": "Aisha",
+      "last_name": "Lawal",
+      "phone": "+234 801 000 9311",
+      "email": "aisha.lawal@example.com"
+    },
+    "delivery": {
+      "method": "courier",
+      "city": "Ilorin",
+      "state": "Kwara",
+      "zone": "Other",
+      "status": "dispatched",
+      "delivered_at": null
+    },
+    "ordered_at": "2026-10-12",
+    "items": [
+      {
+        "sku": "SD-EB-200",
+        "name": "SoundDrop Wireless Earbuds",
+        "colour": "Black",
+        "qty": 1,
+        "unit_price_ngn": 38500
+      }
+    ],
+    "delivery_fee_ngn": 5500,
+    "total_ngn": 44000,
+    "payment": {
+      "method": "transfer",
+      "status": "paid"
+    },
+    "test_note": "Non-English caller (Yoruba) test"
+  },
+  {
+    "order_id": "48229-NG",
+    "customer": {
+      "first_name": "Femi",
+      "last_name": "Oladipo",
+      "phone": "+234 801 000 6142",
+      "email": "femi.oladipo@example.com"
+    },
+    "delivery": {
+      "method": "pickup",
+      "city": "Ikeja",
+      "state": "Lagos",
+      "zone": "Pickup",
+      "status": "ready_for_pickup",
+      "delivered_at": null
+    },
+    "ordered_at": "2026-10-16",
+    "items": [
+      {
+        "sku": "SD-CB-C2L",
+        "name": "USB-C to Lightning Cable, 1 m",
+        "colour": "White",
+        "qty": 2,
+        "unit_price_ngn": 6000
+      }
+    ],
+    "delivery_fee_ngn": 0,
+    "total_ngn": 12000,
+    "payment": {
+      "method": "card",
+      "status": "paid"
+    },
+    "test_note": "Pickup order ready"
+  },
+  {
+    "order_id": "48230-NG",
+    "customer": {
+      "first_name": "Halima",
+      "last_name": "Sani",
+      "phone": "+234 801 000 2780",
+      "email": "halima.sani@example.com"
+    },
+    "delivery": {
+      "method": "courier",
+      "city": "Jos",
+      "state": "Plateau",
+      "zone": "Other",
+      "status": "delivered",
+      "delivered_at": "2026-10-13"
+    },
+    "ordered_at": "2026-10-07",
+    "items": [
+      {
+        "sku": "SD-EB-350",
+        "name": "SoundDrop Pro ANC Earbuds",
+        "colour": "Black",
+        "qty": 1,
+        "unit_price_ngn": 64000
+      }
+    ],
+    "delivery_fee_ngn": 5500,
+    "total_ngn": 69500,
+    "payment": {
+      "method": "card",
+      "status": "paid"
+    },
+    "test_note": "Lost one earbud (not covered; single bud ₦20,000)"
+  },
+  {
+    "order_id": "48231-NG",
+    "customer": {
+      "first_name": "Chidi",
+      "last_name": "Anozie",
+      "phone": "+234 801 000 4825",
+      "email": "chidi.anozie@example.com"
+    },
+    "delivery": {
+      "method": "courier",
+      "city": "Owerri",
+      "state": "Imo",
+      "zone": "Other",
+      "status": "processing",
+      "delivered_at": null
+    },
+    "ordered_at": "2026-10-14",
+    "items": [
+      {
+        "sku": "SD-SP-300",
+        "name": "BoomBox Mini Bluetooth Speaker",
+        "colour": "Black",
+        "qty": 1,
+        "unit_price_ngn": 27000
+      }
+    ],
+    "delivery_fee_ngn": 5500,
+    "total_ngn": 32500,
+    "payment": {
+      "method": "pod",
+      "status": "paid"
+    },
+    "test_note": "INVALID: pay on delivery outside Lagos → data-quality test, agent should not invent"
+  },
+  {
+    "order_id": "48232-NG",
+    "customer": {
+      "first_name": "Yemi",
+      "last_name": "Alade",
+      "phone": "+234 801 000 1953",
+      "email": "yemi.alade@example.com"
+    },
+    "delivery": {
+      "method": "courier",
+      "city": "Ajah",
+      "state": "Lagos",
+      "zone": "Lagos",
+      "status": "delivered",
+      "delivered_at": "2026-10-06"
+    },
+    "ordered_at": "2026-10-05",
+    "items": [
+      {
+        "sku": "SD-PB-10K",
+        "name": "PowerCell 10,000 mAh Power Bank",
+        "colour": "Black",
+        "qty": 1,
+        "unit_price_ngn": 18500
+      }
+    ],
+    "delivery_fee_ngn": 2500,
+    "total_ngn": 21000,
+    "payment": {
+      "method": "pod",
+      "status": "paid"
+    },
+    "test_note": "Power bank swelling → warranty, safety advice"
+  },
+  {
+    "order_id": "48233-NG",
+    "customer": {
+      "first_name": "Rukayat",
+      "last_name": "Salami",
+      "phone": "+234 801 000 8098",
+      "email": "rukayat.salami@example.com"
+    },
+    "delivery": {
+      "method": "courier",
+      "city": "Osogbo",
+      "state": "Osun",
+      "zone": "South-West",
+      "status": "in_transit",
+      "delivered_at": null
+    },
+    "ordered_at": "2026-10-13",
+    "items": [
+      {
+        "sku": "SD-EB-200",
+        "name": "SoundDrop Wireless Earbuds",
+        "colour": "Black",
+        "qty": 1,
+        "unit_price_ngn": 38500
+      },
+      {
+        "sku": "SD-CH-20W",
+        "name": "QuickCharge 20 W USB-C Charger",
+        "colour": "White",
+        "qty": 1,
+        "unit_price_ngn": 9500
+      }
+    ],
+    "delivery_fee_ngn": 4000,
+    "total_ngn": 52000,
+    "payment": {
+      "method": "card",
+      "status": "paid"
+    },
+    "test_note": "Normal"
+  },
+  {
+    "order_id": "48234-NG",
+    "customer": {
+      "first_name": "Obinna",
+      "last_name": "Chukwu",
+      "phone": "+234 801 000 3376",
+      "email": "obinna.chukwu@example.com"
+    },
+    "delivery": {
+      "method": "courier",
+      "city": "Onitsha",
+      "state": "Anambra",
+      "zone": "Other",
+      "status": "delivered",
+      "delivered_at": "2026-09-19"
+    },
+    "ordered_at": "2026-09-15",
+    "items": [
+      {
+        "sku": "SD-HP-500",
+        "name": "BassLine Over-Ear Headphones",
+        "colour": "Black",
+        "qty": 1,
+        "unit_price_ngn": 52000
+      }
+    ],
+    "delivery_fee_ngn": 5500,
+    "total_ngn": 57500,
+    "payment": {
+      "method": "card",
+      "status": "paid"
+    },
+    "test_note": "One side silent → warranty claim"
+  },
+  {
+    "order_id": "48235-NG",
+    "customer": {
+      "first_name": "Tola",
+      "last_name": "Fashola",
+      "phone": "+234 801 000 7064",
+      "email": "tola.fashola@example.com"
+    },
+    "delivery": {
+      "method": "courier",
+      "city": "Ikorodu",
+      "state": "Lagos",
+      "zone": "Lagos",
+      "status": "dispatched",
+      "delivered_at": null
+    },
+    "ordered_at": "2026-10-15",
+    "items": [
+      {
+        "sku": "SD-SW-100",
+        "name": "PulseFit Smartwatch",
+        "colour": "Rose",
+        "qty": 1,
+        "unit_price_ngn": 45000
+      },
+      {
+        "sku": "SD-EB-350",
+        "name": "SoundDrop Pro ANC Earbuds",
+        "colour": "Black",
+        "qty": 1,
+        "unit_price_ngn": 64000
+      }
+    ],
+    "delivery_fee_ngn": 0,
+    "total_ngn": 109000,
+    "payment": {
+      "method": "card",
+      "status": "paid"
+    },
+    "test_note": "Order total over ₦50,000 → free Lagos delivery"
+  },
+  {
+    "order_id": "48236-NG",
+    "customer": {
+      "first_name": "Uche",
+      "last_name": "Ibe",
+      "phone": "+234 801 000 5531",
+      "email": "uche.ibe@example.com"
+    },
+    "delivery": {
+      "method": "courier",
+      "city": "Aba",
+      "state": "Abia",
+      "zone": "Other",
+      "status": "cancelled",
+      "delivered_at": null
+    },
+    "ordered_at": "2026-10-09",
+    "items": [
+      {
+        "sku": "SD-CS-I15",
+        "name": "ClearGuard Shockproof Case, iPhone 15",
+        "colour": "Clear",
+        "qty": 2,
+        "unit_price_ngn": 7500
+      }
+    ],
+    "delivery_fee_ngn": 5500,
+    "total_ngn": 20500,
+    "payment": {
+      "method": "transfer",
+      "status": "unpaid"
+    },
+    "test_note": "Unpaid transfer auto-cancelled after 24 h"
+  },
+  {
+    "order_id": "48237-NG",
+    "customer": {
+      "first_name": "Amaka",
+      "last_name": "Nnaji",
+      "phone": "+234 801 000 9620",
+      "email": "amaka.nnaji@example.com"
+    },
+    "delivery": {
+      "method": "courier",
+      "city": "Lekki",
+      "state": "Lagos",
+      "zone": "Lagos",
+      "status": "delivered",
+      "delivered_at": "2026-10-12"
+    },
+    "ordered_at": "2026-10-11",
+    "items": [
+      {
+        "sku": "SD-EB-200",
+        "name": "SoundDrop Wireless Earbuds",
+        "colour": "Black",
+        "qty": 1,
+        "unit_price_ngn": 38500
+      }
+    ],
+    "delivery_fee_ngn": 2500,
+    "total_ngn": 41000,
+    "payment": {
+      "method": "card",
+      "status": "paid"
+    },
+    "test_note": "Damage batch, reports within 48 h (second replacement case)"
+  },
+  {
+    "order_id": "48238-NG",
+    "customer": {
+      "first_name": "Segun",
+      "last_name": "Ojo",
+      "phone": "+234 801 000 2417",
+      "email": "segun.ojo@example.com"
+    },
+    "delivery": {
+      "method": "courier",
+      "city": "Akure",
+      "state": "Ondo",
+      "zone": "South-West",
+      "status": "delivered",
+      "delivered_at": "2026-10-14"
+    },
+    "ordered_at": "2026-10-10",
+    "items": [
+      {
+        "sku": "SD-TR-01",
+        "name": "Creator Tripod with Ring Light",
+        "colour": "Black",
+        "qty": 1,
+        "unit_price_ngn": 15000
+      }
+    ],
+    "delivery_fee_ngn": 4000,
+    "total_ngn": 19000,
+    "payment": {
+      "method": "card",
+      "status": "paid"
+    },
+    "test_note": "Change-of-mind return within 7 days, sealed"
+  },
+  {
+    "order_id": "48239-NG",
+    "customer": {
+      "first_name": "Hauwa",
+      "last_name": "Garba",
+      "phone": "+234 801 000 6803",
+      "email": "hauwa.garba@example.com"
+    },
+    "delivery": {
+      "method": "courier",
+      "city": "Maiduguri",
+      "state": "Borno",
+      "zone": "Other",
+      "status": "delayed",
+      "delivered_at": null
+    },
+    "ordered_at": "2026-10-04",
+    "items": [
+      {
+        "sku": "SD-PB-20K",
+        "name": "PowerCell 20,000 mAh PD Power Bank",
+        "colour": "Black",
+        "qty": 1,
+        "unit_price_ngn": 29900
+      }
+    ],
+    "delivery_fee_ngn": 5500,
+    "total_ngn": 35400,
+    "payment": {
+      "method": "card",
+      "status": "paid"
+    },
+    "test_note": "Courier delay email (kb/courier) explains it"
+  },
+  {
+    "order_id": "48240-NG",
+    "customer": {
+      "first_name": "Bola",
+      "last_name": "Adebayo",
+      "phone": "+234 801 000 1349",
+      "email": "bola.adebayo@example.com"
+    },
+    "delivery": {
+      "method": "courier",
+      "city": "Ikeja",
+      "state": "Lagos",
+      "zone": "Lagos",
+      "status": "processing",
+      "delivered_at": null
+    },
+    "ordered_at": "2026-10-16",
+    "items": [
+      {
+        "sku": "SD-EB-200",
+        "name": "SoundDrop Wireless Earbuds",
+        "colour": "White",
+        "qty": 2,
+        "unit_price_ngn": 38500
+      }
+    ],
+    "delivery_fee_ngn": 0,
+    "total_ngn": 77000,
+    "payment": {
+      "method": "card",
+      "status": "paid"
+    },
+    "test_note": "Wants address change → allowed (before dispatch)"
+  },
+  {
+    "order_id": "48241-NG",
+    "customer": {
+      "first_name": "Ifeoma",
+      "last_name": "Okeke",
+      "phone": "+234 801 000 4588",
+      "email": "ifeoma.okeke@example.com"
+    },
+    "delivery": {
+      "method": "courier",
+      "city": "Asaba",
+      "state": "Delta",
+      "zone": "Other",
+      "status": "delivered",
+      "delivered_at": "2026-10-12"
+    },
+    "ordered_at": "2026-10-08",
+    "items": [
+      {
+        "sku": "SD-CB-C2C",
+        "name": "USB-C to USB-C Cable, 1 m",
+        "colour": "White",
+        "qty": 3,
+        "unit_price_ngn": 4500
+      }
+    ],
+    "delivery_fee_ngn": 5500,
+    "total_ngn": 19000,
+    "payment": {
+      "method": "card",
+      "status": "paid"
+    },
+    "test_note": "Opened cables, change of mind → not returnable"
+  },
+  {
+    "order_id": "48242-NG",
+    "customer": {
+      "first_name": "Peter",
+      "last_name": "Adeleke",
+      "phone": "+234 801 000 7215",
+      "email": "peter.adeleke@example.com"
+    },
+    "delivery": {
+      "method": "courier",
+      "city": "Ikeja",
+      "state": "Lagos",
+      "zone": "Lagos",
+      "status": "delivered",
+      "delivered_at": "2026-10-15"
+    },
+    "ordered_at": "2026-10-14",
+    "items": [
+      {
+        "sku": "SD-EB-350",
+        "name": "SoundDrop Pro ANC Earbuds",
+        "colour": "Black",
+        "qty": 1,
+        "unit_price_ngn": 64000
+      }
+    ],
+    "delivery_fee_ngn": 0,
+    "total_ngn": 64000,
+    "payment": {
+      "method": "card",
+      "status": "paid"
+    },
+    "test_note": "Injection-test customer (see email EM-19)"
+  }
+]

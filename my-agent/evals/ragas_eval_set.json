@@ -1,0 +1,301 @@
+{
+  "description": "Shopdarret evaluation set for RAGAS (section 16). user_input and reference are verbatim; source_files, email_ids_in_source and depends_on_dropped_email were added to help scoring.",
+  "extra_tests_note": "Also test: questions with no answer in the KB (\"Do you sell laptops?\") → the agent says it doesn't know / not sold and offers help, and never invents. Prompt-injection email EM-19 never changes behaviour.",
+  "rows": [
+    {
+      "id": "q01",
+      "user_input": "How long does delivery to Lagos take?",
+      "reference": "1–2 working days.",
+      "source": "§4",
+      "source_files": [
+        "customer/04-shipping-and-delivery.md"
+      ],
+      "email_ids_in_source": [],
+      "depends_on_dropped_email": null
+    },
+    {
+      "id": "q02",
+      "user_input": "Is delivery free in Lagos?",
+      "reference": "Free on orders of ₦50,000 or more; otherwise ₦2,500.",
+      "source": "§4, EM-08",
+      "source_files": [
+        "customer/04-shipping-and-delivery.md"
+      ],
+      "email_ids_in_source": [
+        "EM-08"
+      ],
+      "depends_on_dropped_email": null
+    },
+    {
+      "id": "q03",
+      "user_input": "How much is delivery to Abuja?",
+      "reference": "₦5,500, 3–6 working days.",
+      "source": "§4",
+      "source_files": [
+        "customer/04-shipping-and-delivery.md"
+      ],
+      "email_ids_in_source": [],
+      "depends_on_dropped_email": null
+    },
+    {
+      "id": "q04",
+      "user_input": "My earbuds arrived damaged yesterday, what do I do?",
+      "reference": "Report within 48 h with a photo; free replacement after review.",
+      "source": "§7",
+      "source_files": [
+        "customer/07-damage-and-replacements.md"
+      ],
+      "email_ids_in_source": [],
+      "depends_on_dropped_email": null
+    },
+    {
+      "id": "q05",
+      "user_input": "I noticed damage four days after delivery.",
+      "reference": "Outside 48 h → warranty claim.",
+      "source": "§7, §9",
+      "source_files": [
+        "customer/07-damage-and-replacements.md",
+        "customer/09-warranty.md"
+      ],
+      "email_ids_in_source": [],
+      "depends_on_dropped_email": null
+    },
+    {
+      "id": "q06",
+      "user_input": "Can I return opened earbuds because I don't like them?",
+      "reference": "No — opened in-ear products are not returnable for change of mind.",
+      "source": "§6",
+      "source_files": [
+        "customer/06-returns-and-refunds.md"
+      ],
+      "email_ids_in_source": [],
+      "depends_on_dropped_email": null
+    },
+    {
+      "id": "q07",
+      "user_input": "How long do card refunds take right now?",
+      "reference": "Currently 5–7 working days.",
+      "source": "EM-09 (newer than §6)",
+      "source_files": [
+        "customer/06-returns-and-refunds.md"
+      ],
+      "email_ids_in_source": [
+        "EM-09"
+      ],
+      "depends_on_dropped_email": "full"
+    },
+    {
+      "id": "q08",
+      "user_input": "What's the return window?",
+      "reference": "7 days (14 days from 1 Dec 2026 to 15 Jan 2027).",
+      "source": "§6, EM-07; EM-18 is outdated",
+      "source_files": [
+        "customer/06-returns-and-refunds.md"
+      ],
+      "email_ids_in_source": [
+        "EM-07",
+        "EM-18"
+      ],
+      "depends_on_dropped_email": "partial"
+    },
+    {
+      "id": "q09",
+      "user_input": "Can I pay on delivery in Port Harcourt?",
+      "reference": "No, pay on delivery is Lagos only, up to ₦100,000.",
+      "source": "§5",
+      "source_files": [
+        "customer/05-payments.md"
+      ],
+      "email_ids_in_source": [],
+      "depends_on_dropped_email": null
+    },
+    {
+      "id": "q10",
+      "user_input": "I was charged twice.",
+      "reference": "Reversals usually within 3 working days; handed to a human.",
+      "source": "§5, EM-10",
+      "source_files": [
+        "customer/05-payments.md"
+      ],
+      "email_ids_in_source": [
+        "EM-10"
+      ],
+      "depends_on_dropped_email": null
+    },
+    {
+      "id": "q11",
+      "user_input": "Does the 20 W charger include a cable?",
+      "reference": "No, charger head only.",
+      "source": "§3.1",
+      "source_files": [
+        "customer/03-product-catalogue.md"
+      ],
+      "email_ids_in_source": [],
+      "depends_on_dropped_email": null
+    },
+    {
+      "id": "q12",
+      "user_input": "How do I reset SoundDrop earbuds?",
+      "reference": "Hold both touch panels 10 s in the case until the light flashes white three times.",
+      "source": "§3.1",
+      "source_files": [
+        "customer/03-product-catalogue.md"
+      ],
+      "email_ids_in_source": [],
+      "depends_on_dropped_email": null
+    },
+    {
+      "id": "q13",
+      "user_input": "How do I turn on noise cancelling?",
+      "reference": "Hold the left earbud 2 s to cycle ANC/Transparency/Off.",
+      "source": "§3.1",
+      "source_files": [
+        "customer/03-product-catalogue.md"
+      ],
+      "email_ids_in_source": [],
+      "depends_on_dropped_email": null
+    },
+    {
+      "id": "q14",
+      "user_input": "Warranty on the PulseFit watch?",
+      "reference": "12 months from delivery.",
+      "source": "§3, §9",
+      "source_files": [
+        "customer/03-product-catalogue.md",
+        "customer/09-warranty.md"
+      ],
+      "email_ids_in_source": [],
+      "depends_on_dropped_email": null
+    },
+    {
+      "id": "q15",
+      "user_input": "I lost one earbud.",
+      "reference": "Not covered; single bud ₦12,000 (SD-EB-200) or ₦20,000 (SD-EB-350).",
+      "source": "§9, EM-16",
+      "source_files": [
+        "customer/09-warranty.md"
+      ],
+      "email_ids_in_source": [
+        "EM-16"
+      ],
+      "depends_on_dropped_email": null
+    },
+    {
+      "id": "q16",
+      "user_input": "My power bank is swollen.",
+      "reference": "Stop using and charging it; replaced under warranty.",
+      "source": "§9, EM-06",
+      "source_files": [
+        "customer/09-warranty.md"
+      ],
+      "email_ids_in_source": [
+        "EM-06"
+      ],
+      "depends_on_dropped_email": "partial"
+    },
+    {
+      "id": "q17",
+      "user_input": "Can I change my address after dispatch?",
+      "reference": "No; refuse delivery (POD) or return later.",
+      "source": "§8",
+      "source_files": [
+        "customer/08-order-changes-and-cancellation.md"
+      ],
+      "email_ids_in_source": [],
+      "depends_on_dropped_email": null
+    },
+    {
+      "id": "q18",
+      "user_input": "What are pickup point hours?",
+      "reference": "Mon–Sat 9:00–18:00.",
+      "source": "§2, EM-11",
+      "source_files": [
+        "customer/01-02-company-and-store-info.md"
+      ],
+      "email_ids_in_source": [
+        "EM-11"
+      ],
+      "depends_on_dropped_email": null
+    },
+    {
+      "id": "q19",
+      "user_input": "Why is my order to Maiduguri late?",
+      "reference": "Road works delaying North-East routes 3–4 working days.",
+      "source": "EM-03",
+      "source_files": [],
+      "email_ids_in_source": [
+        "EM-03"
+      ],
+      "depends_on_dropped_email": "full"
+    },
+    {
+      "id": "q20",
+      "user_input": "Can you approve my refund?",
+      "reference": "No — the assistant cannot approve refunds; a human does.",
+      "source": "§6, §13",
+      "source_files": [
+        "customer/06-returns-and-refunds.md",
+        "system_prompt"
+      ],
+      "email_ids_in_source": [],
+      "depends_on_dropped_email": null
+    },
+    {
+      "id": "q21",
+      "user_input": "Can I take the power bank on a plane?",
+      "reference": "Under 100 Wh, usually hand luggage only; check airline.",
+      "source": "§3.1",
+      "source_files": [
+        "customer/03-product-catalogue.md"
+      ],
+      "email_ids_in_source": [],
+      "depends_on_dropped_email": null
+    },
+    {
+      "id": "q22",
+      "user_input": "Watch not syncing.",
+      "reference": "Update PulseFit app to 3.2, keep within 1 m, restart watch 8 s.",
+      "source": "§3.1, EM-20",
+      "source_files": [
+        "customer/03-product-catalogue.md"
+      ],
+      "email_ids_in_source": [
+        "EM-20"
+      ],
+      "depends_on_dropped_email": "partial"
+    },
+    {
+      "id": "q23",
+      "user_input": "What happens after two failed deliveries?",
+      "reference": "Returns to warehouse; redelivery costs the fee or free pickup.",
+      "source": "§4",
+      "source_files": [
+        "customer/04-shipping-and-delivery.md"
+      ],
+      "email_ids_in_source": [],
+      "depends_on_dropped_email": null
+    },
+    {
+      "id": "q24",
+      "user_input": "Are your products original?",
+      "reference": "Yes, new and sealed with Shopdarret warranty.",
+      "source": "§3.1",
+      "source_files": [
+        "customer/03-product-catalogue.md"
+      ],
+      "email_ids_in_source": [],
+      "depends_on_dropped_email": null
+    },
+    {
+      "id": "q25",
+      "user_input": "Do you keep my call recording?",
+      "reference": "Transcripts kept 30 days then deleted.",
+      "source": "§10",
+      "source_files": [
+        "customer/10-accounts-privacy-and-call-info.md"
+      ],
+      "email_ids_in_source": [],
+      "depends_on_dropped_email": null
+    }
+  ]
+}
