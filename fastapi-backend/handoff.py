@@ -9,7 +9,7 @@ from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel, Field
 
 from config import redis, HANDOFF_SECRET, HANDOFF_TIMEOUT_SECONDS
-from online_agent import online_agents
+from online_agent import online_agents, add_open_alert
 from logger_s import get_logger
 
 router = APIRouter()
@@ -120,13 +120,18 @@ def clean_summary(text: str) -> str:
     return text[:SUMMARY_MAX_CHARS - 1].rstrip() + "…"
 
 
-async def send_alert(websocket, alert: dict) -> bool:
-    """True if the alert reached this dashboard."""
+async def send_alert(connection_id: str, websocket, alert: dict) -> bool:
+    """True if the alert reached this dashboard.
+
+    B3: when it does, remember it as an open alert for this dashboard, so a
+    later disconnect can count as a decline and a win can tell it "taken".
+    """
     try:
         await asyncio.wait_for(websocket.send_json(alert), timeout=SEND_TIMEOUT_SECONDS)
-        return True
     except Exception:
         return False
+    add_open_alert(connection_id, alert["handoff_id"])
+    return True
 
 
 # ---------- Route ----------
@@ -179,7 +184,8 @@ async def request_handoff(
 
     # 4. Alert every dashboard at the same time
     alert = {"type": "incoming", "handoff_id": handoff_id, "summary": summary}
-    delivered = await asyncio.gather(*(send_alert(ws, alert) for _, ws in targets))
+    delivered = await asyncio.gather(
+        *(send_alert(cid, ws, alert) for cid, ws in targets))
 
     # 5. A dashboard that could not be reached counts as a decline (option ii),
     #    so "everyone declined" still works when one of them is gone.

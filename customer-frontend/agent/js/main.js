@@ -18,10 +18,10 @@ import {
 } from "./auth.js";
 import { apiFetch, endSession, isSessionEnded, clearSessionEnded } from "./api.js";
 import { initSound, refreshSoundButton } from "./sound.js";
-import { initIncoming, hideIncomingCall, clearDeclinedCalls } from "./incoming.js";
+import { initIncoming, hideIncomingCall, clearDeclinedCalls, showIncomingCall, getCurrentAlert } from "./incoming.js";
 import { initTranscript, clearTranscript } from "./call-transcript.js";
 import { initHandoff, clearHandoff } from "./call-handoff.js";
-import { initAgentSocket, startAgentSocket, stopAgentSocket } from "./agent_socket.js";
+import { initAgentSocket, startAgentSocket, stopAgentSocket, sendAgentMessage } from "./agent_socket.js";
 
 
 // ---------- Sound (ring + "Click to enable sound" button) ----------
@@ -53,6 +53,8 @@ initAgentSocket({
   // Step 4: any other drop (1006, Render deploy, Wi-Fi, 75 s heartbeat close).
   // Wait, check GET /agent/dashboard, then reconnect.
   onDropped: () => scheduleReconnect(),
+
+  onMessage: (message) => handleServerMessage(message),
 });
 
 
@@ -150,17 +152,54 @@ onViewChange((name) => {
 });
 
 
+// ---------- Messages from the server (B4) ----------
+function handleServerMessage(message) {
+  if (!message || typeof message !== "object") return;
+  const handoffId = typeof message.handoff_id === "string" ? message.handoff_id : "";
+
+  if (message.type === "incoming") {
+    const shown = showIncomingCall({ handoff_id: handoffId, summary: message.summary });
+    // Not shown (for example this agent is on a call): decline at once,
+    // so the AI does not wait the full 30 s for this dashboard.
+    if (!shown && handoffId) {
+      sendAgentMessage({ type: "decline", handoff_id: handoffId });
+    }
+    return;
+  }
+
+  // accepted, taken, too_late: close the popup, but only if it is the same alert
+  // accepted: this agent won. Open the call view (layout only for now).
+  if (message.type === "accepted") {
+    const current = getCurrentAlert();
+    if (current && current.handoffId === handoffId) {
+      hideIncomingCall();
+      showView("call");
+    }
+    return;
+  }
+
+  // taken, too_late: close the popup, but only if it is the same alert
+  if (message.type === "taken" || message.type === "too_late") {
+    const current = getCurrentAlert();
+    if (current && current.handoffId === handoffId) {
+      hideIncomingCall();
+    }
+  }
+}
+
 // ---------- Incoming-call popup ----------
 initIncoming({
-  onAccept: () => {
-
-    hideIncomingCall();
+  onAccept: (alert) => {
+    // The popup stays (ring stopped, buttons disabled) until the server answers.
+    // accepted, taken or too_late close it through handleServerMessage.
+    const sent = sendAgentMessage({ type: "accept", handoff_id: alert.handoffId });
+    if (!sent) hideIncomingCall(); // socket is down: nobody can accept
   },
-  onDecline: () => {
-
+  onDecline: (alert) => {
+    // incoming.js already hid the popup and remembered the decline
+    sendAgentMessage({ type: "decline", handoff_id: alert.handoffId });
   },
 });
-
 
 // ---------- Login ----------
 // checkSession() shows the waiting view with "Connecting…", checks the token
@@ -182,6 +221,29 @@ if (logoutButton) {
     clearDeclinedCalls();
     showView("login");
     setLoginStatus("You have been logged out.", "info");
+  });
+}
+
+// ---------- End call (step 4, first part) ----------
+// No LiveKit yet: this only closes the call view.
+const endCallButton = document.getElementById("end-call-button");
+if (endCallButton) {
+  endCallButton.addEventListener("click", () => {
+    // The session ended during the call (token expired): now go to login.
+    if (isSessionEnded()) {
+      clearToken();
+      clearDeclinedCalls();
+      showView("login");
+      setLoginStatus(SESSION_ENDED_MESSAGE, "info");
+      return;
+    }
+    // Normal end: empty the call view and go back to waiting.
+    clearTranscript();
+    clearHandoff();
+    const helperSearch = document.getElementById("call-helper-search");
+    if (helperSearch) helperSearch.value = "";
+    showView("waiting");
+    refreshSoundButton();
   });
 }
 

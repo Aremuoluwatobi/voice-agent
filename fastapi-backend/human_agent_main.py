@@ -19,12 +19,28 @@ from config import (
     RATE_LIMIT_MESSAGES,
     RATE_LIMIT_WINDOW_SECONDS
 )
-from online_agent import add_agent, remove_agent, online_count
+from online_agent import (
+    add_agent,
+    remove_agent,
+    online_count,
+    online_agents,
+    close_open_alert,
+    close_alert_everywhere,
+    take_open_alerts,
+)
+from handoff import (
+    try_accept,
+    record_decline,
+    ACCEPT_WON,
+    ACCEPT_TOO_LATE,
+    ACCEPT_NOT_ALERTED,
+)
 from datetime import datetime, timezone, timedelta
 from pydantic import BaseModel
 from route_gaurd import secure_route
 from logger_s import get_logger
 from route_gaurd import verify_token, TokenCheckError
+from typing import Optional
 import secrets
 import jwt
 import asyncio
@@ -35,6 +51,11 @@ import time
 router = APIRouter()
 
 logger = get_logger(__name__)
+
+# B3: a handoff_id from the dashboard must be a text of at most this length
+HANDOFF_ID_MAX_CHARS = 100
+# One stuck dashboard must not hold up the others (same idea as handoff.py)
+NOTIFY_TIMEOUT_SECONDS = 5
 
 
 class AuthRequest(BaseModel):
@@ -133,6 +154,99 @@ def message_type_for_log(message) -> str:
     return "(no type)"
 
 
+# ---------- Accept / decline (B3) ----------
+
+def read_handoff_id(message: dict) -> Optional[str]:
+    """The handoff_id from an accept/decline message, or None if it is not valid."""
+    value = message.get("handoff_id")
+    if isinstance(value, str) and 0 < len(value) <= HANDOFF_ID_MAX_CHARS:
+        return value
+    return None
+
+
+async def send_quietly(websocket, payload: dict) -> bool:
+    """Send one message. True if it went out. Never raises."""
+    try:
+        await asyncio.wait_for(
+            websocket.send_json(payload), timeout=NOTIFY_TIMEOUT_SECONDS)
+        return True
+    except Exception:
+        return False
+
+
+async def notify_taken(handoff_id: str, connection_ids: list) -> None:
+    """Tell the dashboards that lost the race, so their popup closes."""
+    payload = {"type": "taken", "handoff_id": handoff_id}
+    sends = []
+    for connection_id in connection_ids:
+        other_socket = online_agents.get(connection_id)
+        if other_socket is not None:
+            sends.append(send_quietly(other_socket, payload))
+    if sends:
+        await asyncio.gather(*sends)
+
+
+async def handle_accept(websocket: WebSocket, connection_id: str, message: dict):
+    """First Accept wins. Redis is the judge (try_accept)."""
+    handoff_id = read_handoff_id(message)
+    if handoff_id is None:
+        logger.info("Accept ignored: bad handoff_id")
+        return
+
+    try:
+        result = await try_accept(handoff_id, connection_id)
+    except Exception as error:
+        # Redis problem: this dashboard did not win, so tell it "too late".
+        logger.error(f"Accept failed (Redis): {type(error).__name__}")
+        result = ACCEPT_TOO_LATE
+
+    if result == ACCEPT_WON:
+        # Remove the alert everywhere, then tell the others they lost.
+        holders = close_alert_everywhere(handoff_id)
+        losers = [cid for cid in holders if cid != connection_id]
+        await send_quietly(
+            websocket, {"type": "accepted", "handoff_id": handoff_id})
+        await notify_taken(handoff_id, losers)
+        logger.info(
+            f"Handoff {handoff_id[:8]} accepted; {len(losers)} other dashboards told")
+    elif result == ACCEPT_TOO_LATE:
+        close_open_alert(connection_id, handoff_id)
+        await send_quietly(
+            websocket, {"type": "too_late", "handoff_id": handoff_id})
+        logger.info(f"Handoff {handoff_id[:8]}: accept came too late")
+    elif result == ACCEPT_NOT_ALERTED:
+        logger.warning(
+            f"Handoff {handoff_id[:8]}: accept from a dashboard that was not alerted")
+
+
+async def handle_decline(connection_id: str, message: dict):
+    """The popup is hidden on the dashboard already. Count the decline."""
+    handoff_id = read_handoff_id(message)
+    if handoff_id is None:
+        logger.info("Decline ignored: bad handoff_id")
+        return
+
+    close_open_alert(connection_id, handoff_id)
+    try:
+        result = await record_decline(handoff_id, connection_id)
+    except Exception as error:
+        logger.error(f"Decline not saved (Redis): {type(error).__name__}")
+        return
+    logger.info(
+        f"Handoff {handoff_id[:8]}: decline recorded (result {result})")
+
+
+async def decline_open_alerts(connection_id: str):
+    """A dashboard is gone: count it as a decline for every alert it still had
+    open, so the AI does not wait the full 30 s. Safe to call twice."""
+    for handoff_id in take_open_alerts(connection_id):
+        try:
+            await record_decline(handoff_id, connection_id)
+        except Exception as error:
+            logger.error(
+                f"Decline on disconnect not saved (Redis): {type(error).__name__}")
+
+
 @router.websocket("/agent/ws")
 async def agent_websocket(websocket: WebSocket):
     # 1. Origin check, before accepting
@@ -214,15 +328,23 @@ async def agent_websocket(websocket: WebSocket):
                 logger.info("Dashboard message ignored: not JSON")
                 continue
 
-            # Allowed types after auth: ping and leaving. Everything else is ignored.
+            # Allowed types after auth: ping, leaving, accept, decline.
+            # Everything else is ignored.
             message_type = message.get("type") if isinstance(
                 message, dict) else None
             if message_type == "ping":
                 await websocket.send_json({"type": "pong"})
+            elif message_type == "accept":
+                await handle_accept(websocket, connection_id, message)
+            elif message_type == "decline":
+                await handle_decline(connection_id, message)
             elif message_type == "leaving":
                 logger.info("Dashboard leaving")
                 # off the list at once (no ~10 s Render delay)
                 remove_agent(connection_id)
+                # open alerts count as declines (also done again in finally,
+                # which is safe: the second call finds nothing)
+                await decline_open_alerts(connection_id)
                 await close_quietly(websocket, "dashboard leaving")
                 return
             else:
@@ -240,6 +362,8 @@ async def agent_websocket(websocket: WebSocket):
     finally:
         if connection_id is not None:
             remove_agent(connection_id)
+            # B3: a dashboard that disconnects counts as a decline
+            await decline_open_alerts(connection_id)
 
 
 # TEST ONLY - remove before launch (used for 3b piece 3/4 and 3c tests)

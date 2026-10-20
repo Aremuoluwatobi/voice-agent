@@ -11,8 +11,8 @@ let pingTimer = null;
 let handlers = {};
 
 
-export function initAgentSocket({ onOnline, onRejected, onDropped } = {}) {
-    handlers = { onOnline, onRejected, onDropped };
+export function initAgentSocket({ onOnline, onRejected, onDropped, onMessage } = {}) {
+    handlers = { onOnline, onRejected, onDropped, onMessage };
     // Tab closing / leaving the page: tell the server at once (decision v24)
     if (typeof window !== "undefined") {
         window.addEventListener("pagehide", () => stopAgentSocket());
@@ -63,19 +63,25 @@ export function startAgentSocket(token) {
             forget();
             try { ws.close(1000); } catch { /* already closed */ }
             report("onRejected", reason);
-        }
-    };
-
-    ws.onclose = (event) => {
-        if (socket !== ws) return; // closed on purpose or after closing: stay quiet
-        forget();
-        if (event.code === POLICY_VIOLATION) {
-            report("onRejected", "policy"); // backup, in case a host delivers 1008
-        } else {
-            report("onDropped", event.code);
+        } else if (authorised) {
+            // Server messages about handoffs: incoming, accepted, taken, too_late.
+            // main.js decides what each one does.
+            report("onMessage", message);
         }
     };
 }
+
+
+ws.onclose = (event) => {
+    if (socket !== ws) return; // closed on purpose or after closing: stay quiet
+    forget();
+    if (event.code === POLICY_VIOLATION) {
+        report("onRejected", "policy"); // backup, in case a host delivers 1008
+    } else {
+        report("onDropped", event.code);
+    }
+};
+
 
 
 export function stopAgentSocket() {
@@ -94,6 +100,17 @@ export function stopAgentSocket() {
     }
 }
 
+// Send one message to the server. Returns true if it went out.
+// Only works after the server said ok. Never throws.
+export function sendAgentMessage(message) {
+    if (!socket || !authorised || socket.readyState !== WebSocket.OPEN) return false;
+    try {
+        socket.send(JSON.stringify(message));
+        return true;
+    } catch {
+        return false;
+    }
+}
 
 function startPing(ws) {
     stopPing();
