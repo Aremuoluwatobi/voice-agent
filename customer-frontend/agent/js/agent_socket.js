@@ -69,18 +69,20 @@ export function startAgentSocket(token) {
             report("onMessage", message);
         }
     };
+
+    ws.onclose = (event) => {
+        if (socket !== ws) return; // closed on purpose or after closing: stay quiet
+        forget();
+        if (event.code === POLICY_VIOLATION) {
+            report("onRejected", "policy"); // backup, in case a host delivers 1008
+        } else {
+            report("onDropped", event.code);
+        }
+    };
 }
 
 
-ws.onclose = (event) => {
-    if (socket !== ws) return; // closed on purpose or after closing: stay quiet
-    forget();
-    if (event.code === POLICY_VIOLATION) {
-        report("onRejected", "policy"); // backup, in case a host delivers 1008
-    } else {
-        report("onDropped", event.code);
-    }
-};
+
 
 
 
