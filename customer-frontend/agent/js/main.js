@@ -22,6 +22,15 @@ import { initIncoming, hideIncomingCall, clearDeclinedCalls, showIncomingCall, g
 import { initTranscript, clearTranscript } from "./call-transcript.js";
 import { initHandoff, clearHandoff } from "./call-handoff.js";
 import { initAgentSocket, startAgentSocket, stopAgentSocket, sendAgentMessage } from "./agent_socket.js";
+import {
+  saveCall,
+  readSavedCall,
+  clearSavedCall,
+  joinRoom,
+  leaveRoom,
+  enableAudio,
+  isInRoom,
+} from "./call-room.js";
 
 
 // ---------- Sound (ring + "Click to enable sound" button) ----------
@@ -37,6 +46,9 @@ initAgentSocket({
   onOnline: () => {
     resetReconnect(); // next drop starts again at about 1 s
     setAgentStatus("Online", "online");
+    // Step 2: every new socket has a new connection ID on the server.
+    // If a call is saved, take it back on this socket (refresh or reconnect).
+    resumeSavedCall();
   },
 
   // Step 3: the server rejected the socket (closing message, or 1008 as backup).
@@ -145,11 +157,109 @@ onViewChange((name) => {
   resetReconnect();    // cancel any pending reconnect wait
   stopAgentSocket();   // sends "leaving" (if online), then closes; never reconnects
   clearSessionEnded(); // reset the "session ended" flag and hide the call notice
+  dropCallLocally();   // leave the LiveKit room and forget the saved call
   clearTranscript();
   clearHandoff();
   const helperSearch = document.getElementById("call-helper-search");
   if (helperSearch) helperSearch.value = "";
 });
+
+
+// ---------- Joining the call with the microphone (step 2) ----------
+
+function showCallNotice(text) {
+  const notice = document.getElementById("call-status-notice");
+  if (!notice) return;
+  notice.textContent = text || "";
+  notice.hidden = !text;
+}
+
+function showAudioButton(show) {
+  const button = document.getElementById("call-audio-button");
+  if (button) button.hidden = !show;
+}
+
+// The LiveKit room ended on its own (not because of End call).
+function handleRoomEnded(kind) {
+  showAudioButton(false);
+  if (kind === "duplicate") {
+    // The call was opened in another tab. This tab must not take it back.
+    clearSavedCall();
+    showCallNotice("This call was opened in another tab, so it was closed here.");
+    return;
+  }
+  if (kind === "room_deleted") {
+    showCallNotice("The call has ended. Press End call to continue.");
+    return;
+  }
+  showCallNotice("You were disconnected from the call. Press End call, or refresh to rejoin.");
+}
+
+// info = the accepted or resumed message (livekit_url, room_token, ...)
+async function joinCall(info) {
+  if (isInRoom()) return; // only the socket dropped: the call itself is still up
+  // No pass: stay quiet. A call_error message follows and explains it.
+  if (typeof info.livekit_url !== "string" || !info.livekit_url) return;
+  if (typeof info.room_token !== "string" || !info.room_token) return;
+
+  showCallNotice("Joining the call…");
+  const result = await joinRoom(
+    { url: info.livekit_url, token: info.room_token },
+    { onEnded: handleRoomEnded, onAudioBlocked: showAudioButton }
+  );
+
+  // End call (or logout) happened while we were joining
+  if (getCurrentView() !== "call") return;
+
+  if (!result.ok) {
+    showCallNotice("Could not join the call audio. Check your connection, then refresh to try again.");
+    return;
+  }
+  if (!result.micOk) {
+    showCallNotice("Your microphone is blocked. Allow it in the browser, then refresh to rejoin.");
+    return;
+  }
+  showCallNotice("");
+}
+
+// After a refresh or a socket reconnect: prove "I am the winner" with the secret.
+function resumeSavedCall() {
+  const saved = readSavedCall();
+  if (!saved) return;
+  sendAgentMessage({
+    type: "resume",
+    handoff_id: saved.handoffId,
+    resume_secret: saved.resumeSecret,
+  });
+}
+
+// Leave the room and forget the call on this browser. Does not change the view.
+function dropCallLocally() {
+  leaveRoom(); // async, nobody needs to wait for it
+  clearSavedCall();
+  showAudioButton(false);
+  showCallNotice("");
+}
+
+// The normal end of a call on this dashboard: back to the waiting view.
+function endCallLocally() {
+  dropCallLocally();
+  clearTranscript();
+  clearHandoff();
+  const helperSearch = document.getElementById("call-helper-search");
+  if (helperSearch) helperSearch.value = "";
+  showView("waiting");
+  refreshSoundButton();
+}
+
+// "Click to enable audio" button (browsers block sound until a click)
+const callAudioButton = document.getElementById("call-audio-button");
+if (callAudioButton) {
+  callAudioButton.addEventListener("click", async () => {
+    await enableAudio();
+    showAudioButton(false);
+  });
+}
 
 
 // ---------- Messages from the server (B4) ----------
@@ -167,14 +277,41 @@ function handleServerMessage(message) {
     return;
   }
 
-  // accepted, taken, too_late: close the popup, but only if it is the same alert
-  // accepted: this agent won. Open the call view (layout only for now).
+  // accepted: this agent won. Open the call view, save the call, join the room.
   if (message.type === "accepted") {
     const current = getCurrentAlert();
     if (current && current.handoffId === handoffId) {
       hideIncomingCall();
       showView("call");
+      if (typeof message.resume_secret === "string" && message.resume_secret) {
+        saveCall(handoffId, message.resume_secret);
+      }
+      joinCall(message);
     }
+    return;
+  }
+
+  // call_error: this agent won, but the server could not make the room pass
+  if (message.type === "call_error") {
+    if (getCurrentView() === "call") {
+      showCallNotice("You accepted the call, but the audio could not start. Press End call.");
+    }
+    return;
+  }
+
+  // resumed: the server took this new connection as the winner, with a fresh pass
+  if (message.type === "resumed") {
+    const saved = readSavedCall();
+    if (!saved || saved.handoffId !== handoffId) return;
+    if (getCurrentView() !== "call") showView("call");
+    joinCall(message);
+    return;
+  }
+
+  // resume_failed: the secret was refused or the call is over
+  if (message.type === "resume_failed") {
+    const saved = readSavedCall();
+    if (saved && saved.handoffId === handoffId) endCallLocally();
     return;
   }
 
@@ -212,11 +349,15 @@ initLogin({
 });
 
 // ---------- Logout ----------
-// showView("login") runs the listener above, which closes the socket
-// and cancels any reconnect.
+// showView("login") runs the listener above, which closes the socket,
+// leaves the room and cancels any reconnect.
 const logoutButton = document.getElementById("logout-button");
 if (logoutButton) {
   logoutButton.addEventListener("click", () => {
+    // Log out during a call ends the call first: clear it on the server too.
+    // Sent before the login clean-up, which sends "leaving" and closes the socket.
+    const saved = readSavedCall();
+    if (saved) sendAgentMessage({ type: "end_call", handoff_id: saved.handoffId });
     clearToken();
     clearDeclinedCalls();
     showView("login");
@@ -225,12 +366,19 @@ if (logoutButton) {
 }
 
 // ---------- End call (step 4, first part) ----------
-// No LiveKit yet: this only closes the call view.
+// Leaves the room and clears the call. It does not yet tell the customer's
+// side that the human has left (that is a later part of step 4).
 const endCallButton = document.getElementById("end-call-button");
 if (endCallButton) {
   endCallButton.addEventListener("click", () => {
+    // Tell the server to delete the resume secret. If the socket is down, the
+    // secret expires by itself after 2 hours, and this browser forgets it now.
+    const saved = readSavedCall();
+    if (saved) sendAgentMessage({ type: "end_call", handoff_id: saved.handoffId });
+
     // The session ended during the call (token expired): now go to login.
     if (isSessionEnded()) {
+      dropCallLocally();
       clearToken();
       clearDeclinedCalls();
       showView("login");
@@ -238,18 +386,14 @@ if (endCallButton) {
       return;
     }
     // Normal end: empty the call view and go back to waiting.
-    clearTranscript();
-    clearHandoff();
-    const helperSearch = document.getElementById("call-helper-search");
-    if (helperSearch) helperSearch.value = "";
-    showView("waiting");
-    refreshSoundButton();
+    endCallLocally();
   });
 }
 
 // ---------- On page open (and after login) ----------
 // All views start hidden in the HTML, so nothing flashes.
-// (Unchanged by step 5: a refresh drops the LiveKit room anyway, decision v25.)
+// Step 2: a refresh no longer drops the call (this replaces decision v25).
+// If a call is saved, show the call view and take the call back once the socket is Online.
 async function checkSession() {
   // 1. No token → login
   if (!hasToken()) {
@@ -266,7 +410,9 @@ async function checkSession() {
   }
 
 
-  showView("waiting");
+  const hasSavedCall = Boolean(readSavedCall());
+  showView(hasSavedCall ? "call" : "waiting");
+  if (hasSavedCall) showCallNotice("Rejoining your call…");
   setAgentStatus("Connecting…", "checking");
   refreshSoundButton();
   clearDeclinedCalls();

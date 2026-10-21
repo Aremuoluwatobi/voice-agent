@@ -159,6 +159,12 @@
             <!-- Step 3b piece 5: shown only if the session ends during a call (text set by api.js) -->
             <p id="call-session-notice" class="call-session-notice" role="status" aria-live="polite" hidden></p>
 
+            <p id="call-status-notice" class="call-session-notice" role="status" aria-live="polite" hidden></p>
+            <button type="button" id="call-audio-button" class="btn-sound" hidden>
+                <img src="/agent/icons/topbar-volume-x.svg" alt="" width="16" height="16" aria-hidden="true">
+                <span>Click to enable audio</span>
+            </button>
+
 
             <!-- 1. Header + customer handoff card -->
             <div class="call-card call-handoff">
@@ -276,6 +282,8 @@
         </section>
 
     </main>
+
+    <script src="/agent/js/vendor/livekit-client.umd.min.js"></script>
 
     <script type="module" src="/agent/js/main.js"></script>
 

@@ -31,6 +31,9 @@ from online_agent import (
 from handoff import (
     try_accept,
     record_decline,
+    start_call_access,
+    resume_call,
+    end_call_cleanup,
     ACCEPT_WON,
     ACCEPT_TOO_LATE,
     ACCEPT_NOT_ALERTED,
@@ -54,6 +57,8 @@ logger = get_logger(__name__)
 
 # B3: a handoff_id from the dashboard must be a text of at most this length
 HANDOFF_ID_MAX_CHARS = 100
+# Step 2: the resume secret from the dashboard must be a text of at most this length
+RESUME_SECRET_MAX_CHARS = 200
 # One stuck dashboard must not hold up the others (same idea as handoff.py)
 NOTIFY_TIMEOUT_SECONDS = 5
 
@@ -164,6 +169,14 @@ def read_handoff_id(message: dict) -> Optional[str]:
     return None
 
 
+def read_resume_secret(message: dict) -> Optional[str]:
+    """The resume secret from a resume message, or None if it is not valid."""
+    value = message.get("resume_secret")
+    if isinstance(value, str) and 0 < len(value) <= RESUME_SECRET_MAX_CHARS:
+        return value
+    return None
+
+
 async def send_quietly(websocket, payload: dict) -> bool:
     """Send one message. True if it went out. Never raises."""
     try:
@@ -204,8 +217,20 @@ async def handle_accept(websocket: WebSocket, connection_id: str, message: dict)
         # Remove the alert everywhere, then tell the others they lost.
         holders = close_alert_everywhere(handoff_id)
         losers = [cid for cid in holders if cid != connection_id]
-        await send_quietly(
-            websocket, {"type": "accepted", "handoff_id": handoff_id})
+
+        # Step 2: only the winner gets a room pass and a resume secret.
+        access = await start_call_access(handoff_id, connection_id)
+        accepted = {"type": "accepted", "handoff_id": handoff_id}
+        if access is not None:
+            accepted.update(access)
+        await send_quietly(websocket, accepted)
+        if access is None:
+            # The call is accepted but this dashboard cannot join it.
+            await send_quietly(
+                websocket,
+                {"type": "call_error", "handoff_id": handoff_id,
+                 "reason": "join_unavailable"})
+
         await notify_taken(handoff_id, losers)
         logger.info(
             f"Handoff {handoff_id[:8]} accepted; {len(losers)} other dashboards told")
@@ -217,6 +242,47 @@ async def handle_accept(websocket: WebSocket, connection_id: str, message: dict)
     elif result == ACCEPT_NOT_ALERTED:
         logger.warning(
             f"Handoff {handoff_id[:8]}: accept from a dashboard that was not alerted")
+
+
+async def handle_resume(websocket: WebSocket, connection_id: str, message: dict):
+    """After a refresh: prove "I am the winner" with the resume secret, take the
+    call back on this new connection, and get a fresh room pass."""
+    handoff_id = read_handoff_id(message)
+    resume_secret = read_resume_secret(message)
+    if handoff_id is None or resume_secret is None:
+        logger.info("Resume ignored: bad handoff_id or secret")
+        await send_quietly(
+            websocket, {"type": "resume_failed", "handoff_id": handoff_id})
+        return
+
+    access = await resume_call(handoff_id, connection_id, resume_secret)
+    if access is None:
+        await send_quietly(
+            websocket, {"type": "resume_failed", "handoff_id": handoff_id})
+        return
+
+    resumed = {"type": "resumed", "handoff_id": handoff_id}
+    resumed.update(access)
+    await send_quietly(websocket, resumed)
+    logger.info(f"Handoff {handoff_id[:8]}: call resumed on a new connection")
+
+
+async def handle_end_call(websocket: WebSocket, connection_id: str, message: dict):
+    """The winner pressed End call: delete the resume secret on the server.
+    Only the current winner can do this. The dashboard must work even if this
+    message never arrives (socket already closed), so the keys also expire
+    by themselves after 2 hours."""
+    handoff_id = read_handoff_id(message)
+    if handoff_id is None:
+        logger.info("End call ignored: bad handoff_id")
+        return
+
+    cleared = await end_call_cleanup(handoff_id, connection_id)
+    await send_quietly(
+        websocket,
+        {"type": "call_cleared", "handoff_id": handoff_id, "cleared": cleared})
+    if cleared:
+        logger.info(f"Handoff {handoff_id[:8]}: call access cleared")
 
 
 async def handle_decline(connection_id: str, message: dict):
@@ -328,7 +394,7 @@ async def agent_websocket(websocket: WebSocket):
                 logger.info("Dashboard message ignored: not JSON")
                 continue
 
-            # Allowed types after auth: ping, leaving, accept, decline.
+            # Allowed types after auth: ping, leaving, accept, decline, resume, end_call.
             # Everything else is ignored.
             message_type = message.get("type") if isinstance(
                 message, dict) else None
@@ -336,6 +402,10 @@ async def agent_websocket(websocket: WebSocket):
                 await websocket.send_json({"type": "pong"})
             elif message_type == "accept":
                 await handle_accept(websocket, connection_id, message)
+            elif message_type == "resume":
+                await handle_resume(websocket, connection_id, message)
+            elif message_type == "end_call":
+                await handle_end_call(websocket, connection_id, message)
             elif message_type == "decline":
                 await handle_decline(connection_id, message)
             elif message_type == "leaving":
