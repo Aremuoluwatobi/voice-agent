@@ -27,10 +27,19 @@ logger = get_logger(__name__)
 # the popup shows the first 200 (SUMMARY_MAX_CHARS in config.js)
 SUMMARY_MAX_CHARS = 500
 RESULT_TTL_SECONDS = 120    # "accepted" / "declined" stay readable for my-agent
-# after Accept, the card lives for the call (step 4)
-CARD_TTL_SECONDS = 7200
+
+# Longest a call may last. The room pass, the resume secret, the winner key,
+# the accept time and the card all live this long after Accept.
+# PLACEHOLDER: change this one line to the length you want (in seconds).
+CALL_MAX_SECONDS = 7200
+# After End call, the card and the transcript stay only this long, so my-agent
+# has time to save the transcript and then the customer details disappear.
+# PLACEHOLDER: change this one line to the time you want (in seconds).
+CARD_AFTER_END_SECONDS = 600
+
 SEND_TIMEOUT_SECONDS = 5    # one stuck dashboard must not hold up the others
 RESUME_SECRET_BYTES = 32    # size of the random resume secret (step 2)
+TRANSCRIPT_MAX_LINES = 200  # most recent transcript lines sent on resume
 
 # Results of record_decline() / try_accept()
 DECLINE_IGNORED = 0         # not waiting any more, or this dashboard was not alerted
@@ -45,35 +54,47 @@ ACCEPT_NOT_ALERTED = -1     # this dashboard never got this alert
 
 # KEYS: status, alerted, card | ARGV: ttl, card_json, connection IDs...
 CREATE_SCRIPT = """
-redis.call('SET', KEYS[ 3 ], ARGV[ 2 ], 'EX', ARGV[ 1 ])
+redis.call('SET', KEYS[3], ARGV[2], 'EX', ARGV[1])
 for i = 3, #ARGV do
-  redis.call('SADD', KEYS[ 2 ], ARGV[ i ])
+  redis.call('SADD', KEYS[2], ARGV[i])
 end
-redis.call('EXPIRE', KEYS[ 2 ], ARGV[ 1 ])
-redis.call('SET', KEYS[ 1 ], 'waiting', 'EX', ARGV[ 1 ])
+redis.call('EXPIRE', KEYS[2], ARGV[1])
+redis.call('SET', KEYS[1], 'waiting', 'EX', ARGV[1])
 return 1
 """
 
 # KEYS: status, alerted, declined | ARGV: connection_id, result_ttl, set_ttl
 DECLINE_SCRIPT = """
-if redis.call('GET', KEYS[ 1 ]) ~= 'waiting' then return 0 end
-if redis.call('SISMEMBER', KEYS[ 2 ], ARGV[ 1 ]) == 0 then return 0 end
-redis.call('SADD', KEYS[ 3 ], ARGV[ 1 ])
-redis.call('EXPIRE', KEYS[ 3 ], ARGV[ 3 ])
-if redis.call('SCARD', KEYS[ 3 ]) >= redis.call('SCARD', KEYS[ 2 ]) then
-  redis.call('SET', KEYS[ 1 ], 'declined', 'EX', ARGV[ 2 ])
+if redis.call('GET', KEYS[1]) ~= 'waiting' then return 0 end
+if redis.call('SISMEMBER', KEYS[2], ARGV[1]) == 0 then return 0 end
+redis.call('SADD', KEYS[3], ARGV[1])
+redis.call('EXPIRE', KEYS[3], ARGV[3])
+if redis.call('SCARD', KEYS[3]) >= redis.call('SCARD', KEYS[2]) then
+  redis.call('SET', KEYS[1], 'declined', 'EX', ARGV[2])
   return 2
 end
 return 1
 """
 
-# KEYS: status, alerted, card, winner | ARGV: connection_id, result_ttl, card_ttl
+# KEYS: status, alerted, card, winner | ARGV: connection_id, result_ttl, call_max
 ACCEPT_SCRIPT = """
-if redis.call('GET', KEYS[ 1 ]) ~= 'waiting' then return 0 end
-if redis.call('SISMEMBER', KEYS[ 2 ], ARGV[ 1 ]) == 0 then return -1 end
-redis.call('SET', KEYS[ 1 ], 'accepted', 'EX', ARGV[ 2 ])
-redis.call('SET', KEYS[ 4 ], ARGV[ 1 ], 'EX', ARGV[ 3 ])
-redis.call('EXPIRE', KEYS[ 3 ], ARGV[ 3 ])
+if redis.call('GET', KEYS[1]) ~= 'waiting' then return 0 end
+if redis.call('SISMEMBER', KEYS[2], ARGV[1]) == 0 then return -1 end
+redis.call('SET', KEYS[1], 'accepted', 'EX', ARGV[2])
+redis.call('SET', KEYS[4], ARGV[1], 'EX', ARGV[3])
+redis.call('EXPIRE', KEYS[3], ARGV[3])
+return 1
+"""
+
+# KEYS: any keys to shorten | ARGV: seconds
+# Shortens the life of each key, but never makes it longer.
+SHORTEN_SCRIPT = """
+for i = 1, #KEYS do
+  local ttl = redis.call('TTL', KEYS[i])
+  if ttl == -1 or ttl > tonumber(ARGV[1]) then
+    redis.call('EXPIRE', KEYS[i], ARGV[1])
+  end
+end
 return 1
 """
 
@@ -87,6 +108,10 @@ def handoff_keys(handoff_id: str) -> dict:
         "card": base + ":card",
         "winner": base + ":winner",
         "resume": base + ":resume",     # step 2: secret that proves "I am the winner"
+        # step 4: when Accept happened (seconds)
+        "accepted_at": base + ":accepted_at",
+        # step 4: transcript lines, one JSON line each. my-agent writes it.
+        "transcript": base + ":transcript",
     }
 
 
@@ -110,7 +135,7 @@ async def try_accept(handoff_id: str, connection_id: str) -> int:
     result = await redis.eval(
         ACCEPT_SCRIPT,
         keys=[keys["status"], keys["alerted"], keys["card"], keys["winner"]],
-        args=[connection_id, str(RESULT_TTL_SECONDS), str(CARD_TTL_SECONDS)],
+        args=[connection_id, str(RESULT_TTL_SECONDS), str(CALL_MAX_SECONDS)],
     )
     return int(result)
 
@@ -134,6 +159,62 @@ async def read_card(handoff_id: str) -> Optional[dict]:
     if isinstance(raw, (str, bytes)):
         raw = json.loads(to_text(raw))
     return raw if isinstance(raw, dict) else None
+
+
+# ---------- What the dashboard needs to show the call (step 4) ----------
+
+async def save_accept_time(handoff_id: str) -> None:
+    """Remember the moment of Accept (whole seconds). The timer counts from it."""
+    await redis.set(
+        handoff_keys(handoff_id)["accepted_at"], str(int(time.time())),
+        ex=CALL_MAX_SECONDS)
+
+
+async def read_elapsed_seconds(handoff_id: str) -> Optional[int]:
+    """Seconds since Accept, or None if the accept time is missing or unreadable.
+    The server does the sum, so the dashboard's own clock cannot make it wrong."""
+    try:
+        raw = to_text(await redis.get(handoff_keys(handoff_id)["accepted_at"]))
+        if raw is None:
+            return None
+        return max(0, int(time.time()) - int(raw))
+    except Exception as error:
+        logger.error(
+            f"Handoff {handoff_id[:8]}: accept time not read: {type(error).__name__}")
+        return None
+
+
+async def read_transcript(handoff_id: str) -> list:
+    """The most recent transcript lines (a list of objects, oldest first).
+    Any problem gives an empty list, so a missing transcript never stops a resume."""
+    try:
+        raw_lines = await redis.lrange(
+            handoff_keys(handoff_id)["transcript"], -TRANSCRIPT_MAX_LINES, -1)
+        lines = []
+        for item in raw_lines or []:
+            if isinstance(item, (str, bytes)):
+                try:
+                    item = json.loads(to_text(item))
+                except json.JSONDecodeError:
+                    continue
+            if isinstance(item, dict):
+                lines.append(item)
+        return lines
+    except Exception as error:
+        logger.error(
+            f"Handoff {handoff_id[:8]}: transcript not read: {type(error).__name__}")
+        return []
+
+
+async def call_state_fields(handoff_id: str, card: dict) -> dict:
+    """The extra fields for "accepted" and "resumed": the summary for the card
+    and the seconds since Accept for the timer (left out if unknown)."""
+    summary = card.get("summary")
+    fields = {"summary": summary if isinstance(summary, str) else ""}
+    elapsed = await read_elapsed_seconds(handoff_id)
+    if elapsed is not None:
+        fields["elapsed_seconds"] = elapsed
+    return fields
 
 
 def human_identity(handoff_id: str) -> str:
@@ -164,7 +245,8 @@ def make_room_pass(room_name: str, identity: str, ttl_seconds: int) -> str:
 
 
 async def start_call_access(handoff_id: str, connection_id: str) -> Optional[dict]:
-    """The winner just won. Save a resume secret and make the first room pass.
+    """The winner just won. Save a resume secret and the accept time, and make
+    the first room pass.
 
     Returns the fields to add to the "accepted" message, or None if anything
     failed (the caller then sends the winner a clear error).
@@ -181,17 +263,20 @@ async def start_call_access(handoff_id: str, connection_id: str) -> Optional[dic
         resume_secret = secrets.token_urlsafe(RESUME_SECRET_BYTES)
         await redis.set(
             handoff_keys(handoff_id)["resume"], resume_secret,
-            ex=CARD_TTL_SECONDS)
+            ex=CALL_MAX_SECONDS)
+        await save_accept_time(handoff_id)
 
         room_token = make_room_pass(
-            room_name, human_identity(handoff_id), CARD_TTL_SECONDS)
-        return {
+            room_name, human_identity(handoff_id), CALL_MAX_SECONDS)
+        access = {
             "livekit_url": LIVEKIT_URL,
             "room_name": room_name,
             "room_token": room_token,
             "resume_secret": resume_secret,
-            "expires_in": CARD_TTL_SECONDS,
+            "expires_in": CALL_MAX_SECONDS,
         }
+        access.update(await call_state_fields(handoff_id, card))
+        return access
     except Exception as error:
         logger.error(
             f"Handoff {handoff_id[:8]}: room pass not made: {type(error).__name__}")
@@ -203,7 +288,8 @@ async def resume_call(handoff_id: str, connection_id: str,
     """After a refresh: the new socket proves it is the winner with the secret.
 
     On success the winner key moves to the new connection ID and a fresh pass
-    is returned. The pass only lasts for what is left of the call's 2 hours.
+    is returned, together with the summary, the seconds since Accept and the
+    recent transcript lines. The pass only lasts for what is left of the call.
     Returns None for any failure (wrong secret, call over, Redis problem).
     """
     try:
@@ -230,12 +316,15 @@ async def resume_call(handoff_id: str, connection_id: str,
         await redis.set(keys["winner"], connection_id, ex=remaining)
         room_token = make_room_pass(
             room_name, human_identity(handoff_id), remaining)
-        return {
+        access = {
             "livekit_url": LIVEKIT_URL,
             "room_name": room_name,
             "room_token": room_token,
             "expires_in": remaining,
         }
+        access.update(await call_state_fields(handoff_id, card))
+        access["transcript"] = await read_transcript(handoff_id)
+        return access
     except Exception as error:
         logger.error(
             f"Handoff {handoff_id[:8]}: resume failed: {type(error).__name__}")
@@ -243,12 +332,14 @@ async def resume_call(handoff_id: str, connection_id: str,
 
 
 async def end_call_cleanup(handoff_id: str, connection_id: str) -> bool:
-    """The winner ended the call: delete the resume secret and the winner key,
-    so an old secret can never open the room again.
+    """The winner ended the call: delete the resume secret, the winner key and
+    the accept time, so an old secret can never open the room again. The card
+    and the transcript are not deleted but shortened to CARD_AFTER_END_SECONDS,
+    so my-agent can still save the transcript.
 
     Only the CURRENT winner may do this. Returns True if it was cleared.
     If the dashboard socket is already gone, this never runs; the keys then
-    expire by themselves after CARD_TTL_SECONDS.
+    expire by themselves after CALL_MAX_SECONDS.
     """
     try:
         keys = handoff_keys(handoff_id)
@@ -259,11 +350,23 @@ async def end_call_cleanup(handoff_id: str, connection_id: str) -> bool:
             return False
         await redis.delete(keys["resume"])
         await redis.delete(keys["winner"])
-        return True
+        await redis.delete(keys["accepted_at"])
     except Exception as error:
         logger.error(
             f"Handoff {handoff_id[:8]}: end call cleanup failed: {type(error).__name__}")
         return False
+
+    # Separate step: if this fails, the call is still closed (the secret is gone).
+    try:
+        await redis.eval(
+            SHORTEN_SCRIPT,
+            keys=[keys["card"], keys["transcript"]],
+            args=[str(CARD_AFTER_END_SECONDS)],
+        )
+    except Exception as error:
+        logger.error(
+            f"Handoff {handoff_id[:8]}: card not shortened: {type(error).__name__}")
+    return True
 
 
 # ---------- Helpers ----------
