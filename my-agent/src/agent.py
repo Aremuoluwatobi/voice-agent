@@ -437,7 +437,7 @@ async def my_agent(ctx: JobContext):
             raise
         except Exception as error:
             # A silent call that never ends is worse than ending it.
-            logger.error(
+            logger.exception(
                 f"Ending handler failed: {type(error).__name__}; closing")
             try:
                 session.shutdown(drain=False)
