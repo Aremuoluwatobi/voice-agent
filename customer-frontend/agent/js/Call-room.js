@@ -1,5 +1,5 @@
 // =========================================================
-// call-room.js - the human agent's audio in the LiveKit room.
+// Call-room.js - the human agent's audio in the LiveKit room.
 // =========================================================
 
 const SAVED_CALL_KEY = "shopdarret_active_call";

@@ -30,7 +30,7 @@ import {
   leaveRoom,
   enableAudio,
   isInRoom,
-} from "./call-room.js";
+} from "./Call-room.js";
 
 
 // ---------- Sound (ring + "Click to enable sound" button) ----------
