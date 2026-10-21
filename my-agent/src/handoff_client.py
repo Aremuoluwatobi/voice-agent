@@ -142,3 +142,20 @@ async def wait_for_decision(handoff_id: str) -> str:
             logger.info(f"Handoff {handoff_id[:8]} timed out (our wait ended)")
             return RESULT_TIMEOUT
         await asyncio.sleep(HANDOFF_POLL_SECONDS)
+
+
+async def winner_exists(handoff_id: str) -> Optional[bool]:
+    """Is the winner key still in Redis?
+
+    False = gone, so the human pressed End call (the backend deletes it).
+    True  = still there, so the human dropped.
+    None  = Redis failed; the caller treats that like a drop (safe).
+    """
+    key = "handoff:{" + handoff_id + "}:winner"
+    try:
+        return int(await redis.exists(key)) == 1
+    except asyncio.CancelledError:
+        raise
+    except Exception as error:
+        logger.warning(f"Winner check failed: {type(error).__name__}")
+        return None

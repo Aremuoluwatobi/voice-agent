@@ -5,6 +5,7 @@ import textwrap
 from typing import Optional
 
 from dotenv import load_dotenv
+from livekit import rtc
 from livekit.agents import (
     Agent,
     AgentServer,
@@ -24,12 +25,16 @@ from .agent_config import (
     CALL_LOCK_KEY,
     LOCK_TIMEOUT_SECONDS,
     LOCK_RENEW_SECONDS,
+    HUMAN_IDENTITY_PREFIX,
+    HUMAN_LEFT_CHECK_SECONDS,
+    HUMAN_DROP_WAIT_SECONDS,
 )
 from .handoff_client import (
     RESULT_ACCEPTED,
     RESULT_WAITING,
     request_handoff,
     wait_for_decision,
+    winner_exists
 )
 from .knowledge import load_knowledge
 
@@ -38,6 +43,11 @@ logger = logging.getLogger("agent")
 load_dotenv(".env.local")
 
 GREETING = "Hi, thanks for calling Shopdarret. How can I help you today?"
+
+HUMAN_DROPPED_GOODBYE = (
+    "I am sorry, we lost connection with my colleague. "
+    "A team member will get back to you. Thank you for calling Shopdarret. Goodbye."
+)
 
 # ---------- System prompt ----------
 BASE_INSTRUCTIONS = textwrap.dedent(
@@ -146,6 +156,8 @@ class Assistant(Agent):
         # Stops the model from alerting the dashboards twice for one call.
         self._handoff_busy = False
         self._handoff_accepted = False
+        # Set when a human accepts; the endings code reads it.
+        self.accepted_handoff_id: Optional[str] = None
 
         super().__init__(
             # A Large Language Model (LLM) is your agent's brain, processing user input and generating a response
@@ -192,6 +204,7 @@ class Assistant(Agent):
 
         if result == RESULT_ACCEPTED:
             self._handoff_accepted = True
+            self.accepted_handoff_id = handoff_id
             return TOOL_TEXT_ACCEPTED
         # no_agents, declined and timeout all mean the same to the caller.
         if result in ("no_agents", "declined", "timeout"):
@@ -384,6 +397,84 @@ async def my_agent(ctx: JobContext):
             delete_room_on_close=True,
         ),
     )
+
+    # ---------- Endings: watch the human agent ----------
+    humans_in_room: set[str] = set()
+    ending = {"started": False, "closed": False}
+    drop_task: Optional[asyncio.Task] = None
+
+    def is_human(participant) -> bool:
+        return participant.identity.startswith(HUMAN_IDENTITY_PREFIX)
+
+    async def handle_human_left():
+        try:
+            await asyncio.sleep(HUMAN_LEFT_CHECK_SECONDS)
+            handoff_id = Assistant.accepted_handoff_id
+            if not handoff_id:
+                logger.warning(
+                    "Human left but no accepted handoff is known; ignored")
+                return
+
+            if await winner_exists(handoff_id) is False:
+                # Winner key gone = the human pressed End call. Everyone leaves now.
+                logger.info("Human pressed End call; closing the call")
+                ending["started"] = True
+                session.shutdown(drain=False)
+                return
+
+            logger.info(
+                f"Human dropped; waiting {HUMAN_DROP_WAIT_SECONDS} s for a return")
+            await asyncio.sleep(HUMAN_DROP_WAIT_SECONDS)
+
+            ending["started"] = True  # too late to come back now
+            # MUTE HOOK: when the mute step is added, turn the AI voice back on here.
+            speech = session.say(HUMAN_DROPPED_GOODBYE,
+                                 allow_interruptions=False)
+            await speech.wait_for_playout()
+            logger.info("Human did not return; goodbye said, closing the call")
+            session.shutdown(drain=True)
+        except asyncio.CancelledError:
+            raise
+        except Exception as error:
+            # A silent call that never ends is worse than ending it.
+            logger.error(
+                f"Ending handler failed: {type(error).__name__}; closing")
+            try:
+                session.shutdown(drain=False)
+            except Exception:
+                pass
+
+    def on_participant_connected(participant: rtc.RemoteParticipant):
+        nonlocal drop_task
+        if not is_human(participant):
+            return
+        humans_in_room.add(participant.identity)
+        if ending["started"]:
+            return
+        if drop_task is not None and not drop_task.done():
+            drop_task.cancel()
+            logger.info("Human came back; drop timer cancelled")
+        drop_task = None
+
+    def on_participant_disconnected(participant: rtc.RemoteParticipant):
+        nonlocal drop_task
+        if not is_human(participant):
+            return
+        humans_in_room.discard(participant.identity)
+        # Another human connection is still there (a refresh overlap), or we are already ending.
+        if humans_in_room or ending["started"] or ending["closed"]:
+            return
+        if drop_task is None or drop_task.done():
+            drop_task = asyncio.create_task(handle_human_left())
+
+    async def stop_ending_watch():
+        ending["closed"] = True
+        if drop_task is not None and not drop_task.done():
+            drop_task.cancel()
+
+    ctx.room.on("participant_connected", on_participant_connected)
+    ctx.room.on("participant_disconnected", on_participant_disconnected)
+    ctx.add_shutdown_callback(stop_ending_watch)
 
     # Speak first, so the caller knows the line is live.
     # Fixed text (no LLM), so it is fast and always the same.
