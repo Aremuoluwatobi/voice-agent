@@ -73,6 +73,13 @@ async function connectToCall() {
 
     const { Room } = LivekitClient;
     room = new Room();
+    console.log('Disconnected event fired');
+    room.on(LivekitClient.RoomEvent.Disconnected, () => {
+        stopTimer();
+        document.querySelectorAll('audio[data-livekit]').forEach((el) => el.remove());
+        room = null;
+        setCallState('idle');
+    });
     setupAudioPlayback(room);
     await room.connect(livekitUrl, token);
     await room.localParticipant.setMicrophoneEnabled(true);

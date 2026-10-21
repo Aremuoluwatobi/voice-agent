@@ -385,8 +385,9 @@ async def my_agent(ctx: JobContext):
 
     # Start the session. With room=ctx.room this also connects to the room,
     # so a separate ctx.connect() is not needed.
+    assistant = Assistant(room_name=ctx.room.name)
     await session.start(
-        agent=Assistant(room_name=ctx.room.name),
+        agent=assistant,
         room=ctx.room,
         room_options=room_io.RoomOptions(
             audio_input=room_io.AudioInputOptions(
@@ -409,7 +410,7 @@ async def my_agent(ctx: JobContext):
     async def handle_human_left():
         try:
             await asyncio.sleep(HUMAN_LEFT_CHECK_SECONDS)
-            handoff_id = Assistant.accepted_handoff_id
+            handoff_id = assistant.accepted_handoff_id
             if not handoff_id:
                 logger.warning(
                     "Human left but no accepted handoff is known; ignored")
