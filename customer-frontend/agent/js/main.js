@@ -20,7 +20,7 @@ import { apiFetch, endSession, isSessionEnded, clearSessionEnded } from "./api.j
 import { initSound, refreshSoundButton } from "./sound.js";
 import { initIncoming, hideIncomingCall, clearDeclinedCalls, showIncomingCall, getCurrentAlert } from "./incoming.js";
 import { initTranscript, clearTranscript } from "./call-transcript.js";
-import { initHandoff, clearHandoff } from "./call-handoff.js";
+import { initHandoff, clearHandoff, showHandoff } from "./call-handoff.js";
 import { initAgentSocket, startAgentSocket, stopAgentSocket, sendAgentMessage } from "./agent_socket.js";
 import {
   saveCall,
@@ -283,6 +283,10 @@ function handleServerMessage(message) {
     if (current && current.handoffId === handoffId) {
       hideIncomingCall();
       showView("call");
+      showHandoff({
+        summary: message.summary,
+        suggested_resolution: message.suggested_resolution,
+      });
       if (typeof message.resume_secret === "string" && message.resume_secret) {
         saveCall(handoffId, message.resume_secret);
       }
@@ -304,6 +308,10 @@ function handleServerMessage(message) {
     const saved = readSavedCall();
     if (!saved || saved.handoffId !== handoffId) return;
     if (getCurrentView() !== "call") showView("call");
+    showHandoff({
+      summary: message.summary,
+      suggested_resolution: message.suggested_resolution,
+    });
     joinCall(message);
     return;
   }
