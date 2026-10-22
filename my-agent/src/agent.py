@@ -10,7 +10,10 @@ from livekit.agents import (
     Agent,
     AgentServer,
     AgentSession,
+    ChatContext,
+    ChatMessage,
     JobContext,
+    StopResponse,
     RunContext,
     TurnHandlingOptions,
     cli,
@@ -18,6 +21,7 @@ from livekit.agents import (
     inference,
     room_io,
 )
+
 from livekit.plugins import ai_coustics
 
 from .agent_config import (
@@ -47,6 +51,11 @@ GREETING = "Hi, thanks for calling Shopdarret. How can I help you today?"
 HUMAN_DROPPED_GOODBYE = (
     "I am sorry, we lost connection with my colleague. "
     "A team member will get back to you. Thank you for calling Shopdarret. Goodbye."
+)
+
+HUMAN_JOINED_LINE = (
+    "My colleague has now joined the call and will take over from here. "
+    "Thank you for your patience."
 )
 
 # ---------- System prompt ----------
@@ -135,10 +144,6 @@ def build_instructions() -> str:
 INSTRUCTIONS = build_instructions()
 
 # What the tool tells the model to say next (kept short, plain, no promises).
-TOOL_TEXT_ACCEPTED = (
-    "A human colleague has accepted and will take over the call. "
-    "Tell the caller this in one short sentence. Promise nothing else."
-)
 TOOL_TEXT_NOBODY = (
     "Nobody is available right now. Tell the caller in one short sentence that "
     "a team member will reach back to them. Do not promise a time."
@@ -205,11 +210,33 @@ class Assistant(Agent):
         if result == RESULT_ACCEPTED:
             self._handoff_accepted = True
             self.accepted_handoff_id = handoff_id
-            return TOOL_TEXT_ACCEPTED
+            # The handover line is played when the human joins the room.
+            raise StopResponse()
         # no_agents, declined and timeout all mean the same to the caller.
         if result in ("no_agents", "declined", "timeout"):
             return TOOL_TEXT_NOBODY
         return TOOL_TEXT_ERROR
+
+
+class ListenerAgent(Agent):
+    """NEW. Used after a human takes over the call.
+
+    It has no LLM, so it cannot reply or use tokens. Speech-to-text keeps
+    running. Each finished customer turn is logged for now (Redis comes later).
+    """
+
+    def __init__(self) -> None:
+        super().__init__(
+            instructions="Listen only. Never speak.",
+            llm=None,
+        )
+
+    async def on_user_turn_completed(
+        self, turn_ctx: ChatContext, new_message: ChatMessage
+    ) -> None:
+        text = (new_message.text_content or "").strip()
+        if text:
+            logger.info(f"Transcript line | Customer | {text}")
 
 
 server = AgentServer()
@@ -402,6 +429,7 @@ async def my_agent(ctx: JobContext):
     # ---------- Endings: watch the human agent ----------
     humans_in_room: set[str] = set()
     ending = {"started": False, "closed": False}
+    handover = {"started": False, "task": None}
     drop_task: Optional[asyncio.Task] = None
 
     def is_human(participant) -> bool:
@@ -445,6 +473,19 @@ async def my_agent(ctx: JobContext):
             except Exception:
                 pass
 
+    async def hand_over_to_listener():
+        # NEW. The human joined: say one fixed line, then stay silent.
+        try:
+            speech = session.say(HUMAN_JOINED_LINE, allow_interruptions=False)
+            await speech.wait_for_playout()
+            session.update_agent(ListenerAgent())
+            logger.info(
+                "Human joined; handover line said, AI is now listen-only")
+        except asyncio.CancelledError:
+            raise
+        except Exception as error:
+            logger.exception(f"Handover failed: {type(error).__name__}")
+
     def on_participant_connected(participant: rtc.RemoteParticipant):
         nonlocal drop_task
         if not is_human(participant):
@@ -452,6 +493,11 @@ async def my_agent(ctx: JobContext):
         humans_in_room.add(participant.identity)
         if ending["started"]:
             return
+
+        if not handover["started"]:
+            handover["started"] = True
+            handover["task"] = asyncio.create_task(hand_over_to_listener())
+
         if drop_task is not None and not drop_task.done():
             drop_task.cancel()
             logger.info("Human came back; drop timer cancelled")
@@ -472,6 +518,9 @@ async def my_agent(ctx: JobContext):
         ending["closed"] = True
         if drop_task is not None and not drop_task.done():
             drop_task.cancel()
+        handover_task = handover["task"]
+        if handover_task is not None and not handover_task.done():
+            handover_task.cancel()
 
     ctx.room.on("participant_connected", on_participant_connected)
     ctx.room.on("participant_disconnected", on_participant_disconnected)
