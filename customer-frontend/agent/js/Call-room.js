@@ -4,6 +4,8 @@
 
 const SAVED_CALL_KEY = "shopdarret_active_call";
 const AUDIO_HOLDER_ID = "call-audio-holder";
+const TRANSCRIPT_TOPIC = "transcript";   // must match TRANSCRIPT_TOPIC in agent_config.py
+const AGENT_IDENTITY_PREFIX = "agent-";  // the AI agent's name in the room starts with this
 
 let room = null; // the LiveKit room we are in (or null)
 
@@ -76,7 +78,7 @@ function removeAudio() {
 // handlers.onEnded(kind): the room ended on its own. kind is
 //   "duplicate" (same identity joined elsewhere), "room_deleted", or "other".
 // handlers.onAudioBlocked(true/false): the browser blocks sound until a click.
-export async function joinRoom({ url, token }, { onEnded, onAudioBlocked } = {}) {
+export async function joinRoom({ url, token }, { onEnded, onAudioBlocked, onTranscript } = {}) {
     const lk = window.LivekitClient;
     if (!lk) return { ok: false, micOk: false };
 
@@ -108,6 +110,24 @@ export async function joinRoom({ url, token }, { onEnded, onAudioBlocked } = {})
         if (reason === lk.DisconnectReason.DUPLICATE_IDENTITY) kind = "duplicate";
         else if (reason === lk.DisconnectReason.ROOM_DELETED) kind = "room_deleted";
         if (typeof onEnded === "function") onEnded(kind);
+    });
+
+    // Transcript lines sent by the AI agent. Only the agent may send them:
+    // customers and humans have other names, which the backend decides.
+    thisRoom.on(lk.RoomEvent.DataReceived || "dataReceived", (payload, participant, kind, topic) => {
+        if (room !== thisRoom) return;
+        if (topic !== TRANSCRIPT_TOPIC) return;
+        if (!participant || !participant.identity.startsWith(AGENT_IDENTITY_PREFIX)) {
+            console.warn("Transcript data ignored from", participant && participant.identity);
+            return;
+        }
+        if (typeof onTranscript !== "function") return;
+        try {
+            const data = JSON.parse(new TextDecoder().decode(payload));
+            if (data && Array.isArray(data.lines)) onTranscript(data.lines);
+        } catch {
+            // not readable: ignore
+        }
     });
 
     try {

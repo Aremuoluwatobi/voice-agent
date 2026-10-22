@@ -1,4 +1,3 @@
-// /agent/js/call-transcript.js
 // Live transcript box for the active call view.
 
 import { onViewChange } from "/agent/js/views.js";
@@ -10,11 +9,13 @@ const SPEAKERS = {
     customer: { label: "Customer", tagClass: "call-tag-customer" },
     ai: { label: "AI Agent", tagClass: "call-tag-ai" },
     agent: { label: "You", tagClass: "call-tag-agent" },
+    system: { label: "Notice", tagClass: "call-tag-ai" },
 };
 
 let list = null;
 let jumpButton = null;
 let emptyNote = null;
+const seenSeq = new Set();
 
 function isNearBottom() {
     return list.scrollHeight - list.scrollTop - list.clientHeight <= NEAR_BOTTOM_PX;
@@ -65,6 +66,12 @@ export function addTranscriptLine(line) {
     const text = typeof line?.text === "string" ? line.text.trim() : "";
     if (!speaker || !text) return false;
 
+    // The same line can arrive twice (live, and again after a join or refresh): show it once.
+    if (Number.isInteger(line.seq)) {
+        if (seenSeq.has(line.seq)) return false;
+        seenSeq.add(line.seq);
+    }
+
     const wasNearBottom = isNearBottom();   // check BEFORE adding
 
     const item = document.createElement("li");
@@ -78,10 +85,20 @@ export function addTranscriptLine(line) {
     tag.textContent = speaker.label;
     meta.append(tag);
 
-    if (typeof line.time === "string" && line.time) {
+    // The agent sends when the speaker STARTED (seconds since 1970).
+    let timeText = "";
+    if (typeof line.started === "number") {
+        timeText = new Date(line.started * 1000).toLocaleTimeString([], {
+            hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+        });
+        item.dataset.started = String(line.started);
+    } else if (typeof line.time === "string") {
+        timeText = line.time.slice(0, 8);
+    }
+    if (timeText) {
         const time = document.createElement("span");
         time.className = "call-line-time";
-        time.textContent = line.time.slice(0, 8);
+        time.textContent = timeText;
         meta.append(time);
     }
 
@@ -90,7 +107,17 @@ export function addTranscriptLine(line) {
     body.textContent = text;
 
     item.append(meta, body);
-    list.append(item);
+
+    // Place the line by when the speaker started, not by when it arrived.
+    let before = null;
+    if (typeof line.started === "number") {
+        let node = list.lastElementChild;
+        while (node && Number(node.dataset.started) > line.started) {
+            before = node;
+            node = node.previousElementSibling;
+        }
+    }
+    list.insertBefore(item, before);
 
     // drop the oldest lines on very long calls
     while (list.children.length > MAX_LINES) {
@@ -110,6 +137,7 @@ export function addTranscriptLine(line) {
 // Empty the box (start of a new call / End call).
 export function clearTranscript() {
     if (!list) return;
+    seenSeq.clear();
     list.replaceChildren();
     jumpButton.hidden = true;
     updateEmptyNote();

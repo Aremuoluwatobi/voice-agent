@@ -1,14 +1,3 @@
-"""my-agent side of the human handoff (step B5).
-
-1. request_handoff(): POST /agent/handoff on the Render backend.
-2. wait_for_decision(): check the handoff status key in Redis about every
-   second, for up to HANDOFF_TIMEOUT_SECONDS, until a dashboard accepts,
-   every dashboard declines, or the key expires.
-
-The summary is never logged (it can hold customer details). The secret is
-never logged either.
-"""
-
 import asyncio
 import json
 import logging
@@ -24,6 +13,8 @@ from .agent_config import (
     HANDOFF_TIMEOUT_SECONDS,
     HANDOFF_POLL_SECONDS,
     HANDOFF_REQUEST_TIMEOUT_SECONDS,
+    CALL_LOG_MAX_LINES,
+    CALL_LOG_SECONDS,
 )
 
 logger = logging.getLogger("agent")
@@ -35,6 +26,16 @@ RESULT_DECLINED = "declined"    # every alerted dashboard declined
 RESULT_NO_AGENTS = "no_agents"  # nobody online
 RESULT_TIMEOUT = "timeout"      # nobody answered in time (status key gone)
 RESULT_ERROR = "error"          # something failed on our side
+
+# Adds one line to the call log, keeps only the newest lines, and restarts the
+# one day timer. It is one command to Redis.
+# KEYS: the log | ARGV: the line (JSON), max lines, seconds
+ADD_LOG_LINE_SCRIPT = """
+redis.call('RPUSH', KEYS[1], ARGV[1])
+redis.call('LTRIM', KEYS[1], -tonumber(ARGV[2]), -1)
+redis.call('EXPIRE', KEYS[1], ARGV[3])
+return 1
+"""
 
 
 def _post_blocking(url: str, payload: dict) -> tuple[int, Optional[dict]]:
@@ -159,3 +160,20 @@ async def winner_exists(handoff_id: str) -> Optional[bool]:
     except Exception as error:
         logger.warning(f"Winner check failed: {type(error).__name__}")
         return None
+
+
+async def save_log_line(room_name: str, line_json: str) -> bool:
+    """Save one transcript line. Never raises: a failed write is only logged."""
+    key = "call:{" + room_name + "}:log"
+    try:
+        await redis.eval(
+            ADD_LOG_LINE_SCRIPT,
+            keys=[key],
+            args=[line_json, str(CALL_LOG_MAX_LINES), str(CALL_LOG_SECONDS)],
+        )
+        return True
+    except asyncio.CancelledError:
+        raise
+    except Exception as error:
+        logger.warning(f"Call log write failed: {type(error).__name__}")
+        return False

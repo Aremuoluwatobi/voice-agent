@@ -19,7 +19,7 @@ import {
 import { apiFetch, endSession, isSessionEnded, clearSessionEnded } from "./api.js";
 import { initSound, refreshSoundButton } from "./sound.js";
 import { initIncoming, hideIncomingCall, clearDeclinedCalls, showIncomingCall, getCurrentAlert } from "./incoming.js";
-import { initTranscript, clearTranscript } from "./call-transcript.js";
+import { initTranscript, clearTranscript, addTranscriptLine } from "./call-transcript.js";
 import { initHandoff, clearHandoff, showHandoff } from "./call-handoff.js";
 import { initAgentSocket, startAgentSocket, stopAgentSocket, sendAgentMessage } from "./agent_socket.js";
 import {
@@ -195,6 +195,11 @@ function handleRoomEnded(kind) {
   showCallNotice("You were disconnected from the call. Press End call, or refresh to rejoin.");
 }
 
+// Lines sent by the AI agent over the room. The box drops lines it already has.
+function handleTranscriptLines(lines) {
+  for (const line of lines) addTranscriptLine(line);
+}
+
 // info = the accepted or resumed message (livekit_url, room_token, ...)
 async function joinCall(info) {
   if (isInRoom()) return; // only the socket dropped: the call itself is still up
@@ -205,7 +210,7 @@ async function joinCall(info) {
   showCallNotice("Joining the call…");
   const result = await joinRoom(
     { url: info.livekit_url, token: info.room_token },
-    { onEnded: handleRoomEnded, onAudioBlocked: showAudioButton }
+    { onEnded: handleRoomEnded, onAudioBlocked: showAudioButton, onTranscript: handleTranscriptLines }
   );
 
   // End call (or logout) happened while we were joining
