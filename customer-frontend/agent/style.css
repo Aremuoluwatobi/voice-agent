@@ -1038,8 +1038,9 @@ p {
 
 .call-helper-results li {
     display: flex;
-    align-items: center;
-    gap: 10px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
     padding: 10px 14px;
     font-size: 0.85rem;
     color: var(--navy);
@@ -1051,6 +1052,62 @@ p {
 
 .call-helper-results img {
     flex-shrink: 0;
+}
+
+.call-helper-form {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.call-helper-form .call-search {
+    flex: 1;
+    min-width: 0;
+}
+
+.call-helper-send {
+    flex: none;
+    height: 36px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--navy);
+    color: #FFFFFF;
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.call-helper-send:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.call-helper-status {
+    margin: 0 0 10px;
+    font-size: 0.8rem;
+    color: var(--call-muted);
+}
+
+.call-helper-status:empty {
+    display: none;
+}
+
+.call-helper-result-title {
+    font-weight: 600;
+}
+
+.call-helper-result-excerpt {
+    margin: 0;
+}
+
+.call-helper-result-file {
+    font-size: 0.75rem;
+    color: var(--call-muted);
+}
+
+.call-placeholder[hidden] {
+    display: none;
 }
 
 /* ---------- 3. suggested resolution + End call ---------- */
