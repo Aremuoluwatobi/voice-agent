@@ -436,7 +436,7 @@ async def agent_websocket(websocket: WebSocket):
             await decline_open_alerts(connection_id)
 
 
-# TEST ONLY - remove before launch (used for 3b piece 3/4 and 3c tests)
+# TEST ONLY - remove before launch
 @router.get("/agent/online-count")
 def get_online_count(guard=Depends(secure_route)):
     return {"count": online_count()}

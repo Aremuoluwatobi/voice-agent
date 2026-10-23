@@ -9,6 +9,10 @@ export const LOGIN_PATH = "/agent/login";
 
 export const VERIFY_PATH = "/agent/dashboard";
 
+export const HELPER_PATH = "/agent/helper";
+
+export const HELPER_QUESTION_MAX_CHARS = 500;
+
 // -----dashboard WebSocket -----
 
 export const AGENT_WS_PATH = "/agent/ws";

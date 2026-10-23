@@ -244,18 +244,20 @@
 
                     <div class="call-panel-body">
                         <div class="call-scroll call-helper" tabindex="0" aria-label="AI agent helper">
-                            <label class="call-search" for="call-helper-search">
-                                <img src="/agent/icons/call-file-text.svg" alt="" width="16" height="16">
-                                <span class="visually-hidden">Search the knowledge base</span>
-                                <!-- Accepts typing (not disabled); search is not wired until Phase 9 -->
-                                <input id="call-helper-search" type="search" placeholder="Find the return policy…"
-                                    autocomplete="off">
-                            </label>
+                            <form id="call-helper-form" class="call-helper-form">
+                                <label class="call-search" for="call-helper-search">
+                                    <img src="/agent/icons/call-file-text.svg" alt="" width="16" height="16">
+                                    <span class="visually-hidden">Search the knowledge base</span>
+                                    <input id="call-helper-search" type="search" placeholder="Find the return policy…"
+                                        autocomplete="off" enterkeyhint="send">
+                                </label>
+                                <button id="call-helper-send" class="call-helper-send" type="submit">Send</button>
+                            </form>
                             <p class="call-helper-note">Retrieved from Shopdarret docs</p>
-
-                            <!-- Keep EMPTY in the HTML: results come in Phase 9 -->
+                            <p id="call-helper-status" class="call-helper-status" role="status" aria-live="polite"></p>
+                            <!-- Keep EMPTY in the HTML: call-helper.js fills it -->
                             <ul id="call-helper-results" class="call-helper-results"></ul>
-                            <p class="call-placeholder">Results will appear here.</p>
+                            <p id="call-helper-placeholder" class="call-placeholder">Type a question and press Send.</p>
                         </div>
                     </div>
                 </article>

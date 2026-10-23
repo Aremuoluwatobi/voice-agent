@@ -32,6 +32,8 @@ import {
   isInRoom,
 } from "./Call-room.js";
 
+import { initHelper, clearHelper } from "./call-helper.js";
+
 
 // ---------- Sound (ring + "Click to enable sound" button) ----------
 initSound();
@@ -150,6 +152,7 @@ function resetReconnect() {
 
 initTranscript();
 initHandoff();
+initHelper();
 
 // Going back to login (Log out, any 401, expired or missing token, socket rejected)
 onViewChange((name) => {
@@ -160,8 +163,7 @@ onViewChange((name) => {
   dropCallLocally();   // leave the LiveKit room and forget the saved call
   clearTranscript();
   clearHandoff();
-  const helperSearch = document.getElementById("call-helper-search");
-  if (helperSearch) helperSearch.value = "";
+  clearHelper();
 });
 
 
@@ -251,8 +253,7 @@ function endCallLocally() {
   dropCallLocally();
   clearTranscript();
   clearHandoff();
-  const helperSearch = document.getElementById("call-helper-search");
-  if (helperSearch) helperSearch.value = "";
+  clearHelper();
   showView("waiting");
   refreshSoundButton();
 }
