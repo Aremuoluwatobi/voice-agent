@@ -1,33 +1,25 @@
-"""Checks what the AI said against the Shopdarret knowledge, one AI line at a time.
-
-Only the AI's own lines are judged. The judge lists claims and says supported
-or unsupported. The score and colour are worked out HERE. The text shown to the
-human is always the AI's exact words from the call log, never model text.
-
-This file does not import handoff.py (handoff.py imports this file).
-"""
-
 import asyncio
 import json
 import re
-import urllib.error
-import urllib.request
+import time
+
+from groq import AsyncGroq
 
 import config as cfg
-from config import redis, CHECK_MODEL, OPEN_ROUTER_API_KEY
+from config import redis
 from knowledge import load_knowledge
-import time
 from logger_s import get_logger
 
 logger = get_logger(__name__)
 
-OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-
 # Read with getattr so a missing name cannot stop the backend from starting.
 # The timeout default of 20 is only used if config.py has no value.
-OPEN_ROUTER_API_KEY = OPEN_ROUTER_API_KEY
-CHECK_MODEL = CHECK_MODEL
+GROQ_API_KEY = getattr(cfg, "GROQ_API_KEY", "")
+CHECK_GROQ_MODEL = "openai/gpt-oss-120b"
 CHECK_TIMEOUT_SECONDS = getattr(cfg, "CHECK_TIMEOUT_SECONDS", 20)
+
+# Created once, like the helper does. No key means every check shows "failed".
+groq_client = AsyncGroq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 # Score bands (guesses until tested): below ORANGE_FROM is red, below
 # GREEN_FROM is orange. Exactly 0.4 is orange, exactly 0.7 is green.
@@ -38,8 +30,8 @@ LINE_SHOWN_MAX_CHARS = 200     # the RAGAS box is small
 MIN_CHARS_TO_CHECK = 25        # shorter AI lines are saved as "nothing to check"
 # earlier AI lines sent as context (AI lines only)
 CONTEXT_AI_LINES = 2
-KNOWLEDGE_MAX_CHARS = 8000     # most knowledge text sent per judge call
-MAX_OUTPUT_TOKENS = 2000
+KNOWLEDGE_MAX_CHARS = 6000
+MAX_OUTPUT_TOKENS = 900
 LOG_WINDOW = 60                # newest log lines read when judging one line
 CHECK_RESULT_SECONDS = 86400   # PLACEHOLDER: same one day as the call log
 CHECK_RESULT_MAX_ITEMS = 200
@@ -232,30 +224,21 @@ def parse_json_reply(text: str) -> dict:
     return value
 
 
-def ask_judge_blocking(messages: list) -> dict:
-    """Plain blocking POST (run in a thread). Returns the parsed JSON reply."""
-    body = {
-        "model": CHECK_MODEL,
-        "messages": messages,
-        "temperature": 0,
-        "max_tokens": MAX_OUTPUT_TOKENS,
-    }
-    request = urllib.request.Request(
-        OPENROUTER_URL,
-        data=json.dumps(body).encode("utf-8"),
-        method="POST",
-        headers={
-            "Authorization": "Bearer " + OPEN_ROUTER_API_KEY,
-            "Content-Type": "application/json",
-        },
+async def ask_judge(messages: list) -> dict:
+    """One call to Groq. Returns the parsed JSON reply. Raises on any problem."""
+    if groq_client is None:
+        raise ValueError("Groq key missing")
+    response = await asyncio.wait_for(
+        groq_client.chat.completions.create(
+            model=CHECK_GROQ_MODEL,
+            messages=messages,
+            temperature=0,
+            max_completion_tokens=MAX_OUTPUT_TOKENS,
+            reasoning_effort="low",
+        ),
+        timeout=CHECK_TIMEOUT_SECONDS,
     )
-    with urllib.request.urlopen(
-            request, timeout=CHECK_TIMEOUT_SECONDS) as response:
-        data = json.loads(response.read().decode("utf-8"))
-
-    first = next(iter(data.get("choices") or []), None)
-    message = first.get("message") if isinstance(first, dict) else None
-    content = message.get("content") if isinstance(message, dict) else None
+    content = response.choices[0].message.content
     if not isinstance(content, str) or not content.strip():
         raise ValueError("empty reply from the judge")
     return parse_json_reply(content)
@@ -355,8 +338,8 @@ async def run_line_check(room_name: str, seq: int) -> None:
             text = squash(line["text"])
             if len(text) < MIN_CHARS_TO_CHECK:
                 record = {"seq": seq, "status": "none"}
-            elif not OPEN_ROUTER_API_KEY or not CHECK_MODEL:
-                logger.error("Line check not configured: key or model missing")
+            elif groq_client is None:
+                logger.error("Line check not configured: GROQ_API_KEY missing")
             else:
                 knowledge_text = pick_knowledge(" ".join(context + [text]))
                 narrowed_at = judged_at = time.monotonic()
@@ -365,8 +348,7 @@ async def run_line_check(room_name: str, seq: int) -> None:
                 else:
                     messages = build_messages(text, context, knowledge_text)
                     async with get_slots():
-                        reply = await asyncio.to_thread(
-                            ask_judge_blocking, messages)
+                        reply = await ask_judge(messages)
                     judged_at = time.monotonic()
                     supported, unsupported = judge_line(reply, text)
                     if supported + len(unsupported) == 0:
@@ -377,10 +359,11 @@ async def run_line_check(room_name: str, seq: int) -> None:
                                   "unsupported": unsupported}
     except asyncio.CancelledError:
         raise
-    except urllib.error.HTTPError as error:
-        logger.error(f"Line check judge refused: HTTP {error.code}")
     except Exception as error:
-        logger.error(f"Line check failed: {type(error).__name__}")
+        status = getattr(error, "status_code", None)
+        detail = (" " + str(error)[:300]) if isinstance(status, int) else ""
+        logger.error(
+            f"Line check failed: {type(error).__name__} status {status}{detail}")
 
     try:
         await save_verdict(room_name, record)
@@ -393,8 +376,8 @@ async def run_line_check(room_name: str, seq: int) -> None:
         f"judge {judged_at - narrowed_at:.1f}s, "
         f"total {time.monotonic() - began:.1f}s")
 
-
 # ---------- Adding the verdicts up (called at Accept and on resume) ----------
+
 
 async def read_verdicts(room_name: str) -> dict:
     raw = await redis.lrange(verdict_key(room_name), 0, -1)
