@@ -177,3 +177,29 @@ async def save_log_line(room_name: str, line_json: str) -> bool:
     except Exception as error:
         logger.warning(f"Call log write failed: {type(error).__name__}")
         return False
+
+_check_tasks = set()   # keeps background tasks alive until they finish
+
+
+async def request_line_check(room_name: str, seq) -> None:
+    """Ask the backend to judge one saved AI line. Never raises and never
+    waits for the judge (the backend answers at once)."""
+    if not BACKEND_URL or not HANDOFF_SECRET:
+        return
+    if not isinstance(seq, int) or isinstance(seq, bool):
+        return
+    try:
+        await asyncio.to_thread(
+            _post_blocking, BACKEND_URL + "/agent/check-line",
+            {"room_name": room_name, "seq": seq})
+    except asyncio.CancelledError:
+        raise
+    except Exception as error:
+        logger.warning(f"Line check request failed: {type(error).__name__}")
+
+
+def start_line_check(room_name: str, seq) -> None:
+    """Start the request as its own task. Nothing waits for it."""
+    task = asyncio.create_task(request_line_check(room_name, seq))
+    _check_tasks.add(task)
+    task.add_done_callback(_check_tasks.discard)
