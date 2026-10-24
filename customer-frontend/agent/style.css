@@ -1293,3 +1293,64 @@ p {
         margin: 0 14px;
     }
 }
+
+/* ---------- RAGAS pill and reason ---------- */
+.call-ragas[data-colour="green"] {
+    background: #e3f6e8;
+    color: #14612c;
+    border-color: #8fd0a2;
+}
+
+.call-ragas[data-colour="orange"] {
+    background: #fff1dc;
+    color: #8a4b00;
+    border-color: #f0b863;
+}
+
+.call-ragas[data-colour="red"] {
+    background: #fde4e4;
+    color: #8f1d1d;
+    border-color: #eb9b9b;
+}
+
+.call-ragas[data-colour="grey"] {
+    background: #eceff3;
+    color: #4a5565;
+    border-color: #c4cbd6;
+}
+
+.call-handoff .call-ragas-reason {
+    margin: 8px 18px 0;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-left-width: 4px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--navy);
+    overflow-wrap: anywhere;
+}
+
+.call-handoff .call-ragas-reason[data-colour="orange"] {
+    border-left-color: #f0b863;
+    background: #fff8ec;
+}
+
+.call-handoff .call-ragas-reason[data-colour="red"] {
+    border-left-color: #eb9b9b;
+    background: #fff1f1;
+}
+
+@media (max-width: 820px) {
+    .call-handoff .call-ragas-reason {
+        margin: 8px 14px 0;
+    }
+}
+
+.call-ragas {
+    gap: 6px;
+}
+
+#call-ragas-score:empty {
+    display: none;
+}

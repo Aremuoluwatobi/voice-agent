@@ -180,11 +180,17 @@
                     <!-- Order match score: hidden until Phases 5-6 -->
                     <span id="call-order-match-pill" class="call-pill" hidden>Order match: <span
                             id="call-order-match"></span></span>
+                    <span id="call-ragas-pill" class="call-pill call-ragas" data-colour="grey"
+                        title="Checks whether the AI's answers to the customer match the company documents"
+                        aria-live="polite">RAGAS:
+                        <strong id="call-ragas-label">Not checked</strong>
+                        <span id="call-ragas-score"></span></span>
                 </div>
 
                 <h2 class="call-subtitle">Customer handoff</h2>
                 <div id="call-summary" class="call-scroll call-summary" tabindex="0" aria-label="Customer summary">No
                     summary yet</div>
+                <p id="call-ragas-reason" class="call-ragas-reason" data-colour="grey" hidden aria-live="polite"></p>
             </div>
 
             <!-- 2. The three panels -->

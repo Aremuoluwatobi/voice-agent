@@ -33,6 +33,7 @@ import {
 } from "./Call-room.js";
 
 import { initHelper, clearHelper } from "./call-helper.js";
+import { startTimer, stopTimer } from "./call-timer.js";
 
 
 // ---------- Sound (ring + "Click to enable sound" button) ----------
@@ -244,6 +245,7 @@ function resumeSavedCall() {
 function dropCallLocally() {
   leaveRoom(); // async, nobody needs to wait for it
   clearSavedCall();
+  stopTimer();
   showAudioButton(false);
   showCallNotice("");
 }
@@ -265,6 +267,40 @@ if (callAudioButton) {
     await enableAudio();
     showAudioButton(false);
   });
+}
+
+// The card fields the server sends with "accepted" and "resumed"
+function handoffFields(message) {
+  return {
+    summary: message.summary,
+    suggested_resolution: message.suggested_resolution,
+    ragas: message.ragas,
+  };
+}
+
+if (message.type === "accepted") {
+  const current = getCurrentAlert();
+  if (current && current.handoffId === handoffId) {
+    hideIncomingCall();
+    showView("call");
+    showHandoff(handoffFields(message));
+    startTimer(typeof message.elapsed_seconds === "number" ? message.elapsed_seconds : 0);
+    if (typeof message.resume_secret === "string" && message.resume_secret) {
+      saveCall(handoffId, message.resume_secret);
+    }
+    joinCall(message);
+  }
+  return;
+}
+
+if (message.type === "resumed") {
+  const saved = readSavedCall();
+  if (!saved || saved.handoffId !== handoffId) return;
+  if (getCurrentView() !== "call") showView("call");
+  showHandoff(handoffFields(message));
+  startTimer(message.elapsed_seconds);
+  joinCall(message);
+  return;
 }
 
 
@@ -292,6 +328,7 @@ function handleServerMessage(message) {
       showHandoff({
         summary: message.summary,
         suggested_resolution: message.suggested_resolution,
+        ragas: message.ragas,
       });
       if (typeof message.resume_secret === "string" && message.resume_secret) {
         saveCall(handoffId, message.resume_secret);

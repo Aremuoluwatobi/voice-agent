@@ -1,3 +1,4 @@
+# handoff.py
 import asyncio
 import json
 import secrets
@@ -19,6 +20,7 @@ from config import (
     LIVEKIT_API_SECRET,
 )
 from online_agent import online_agents, add_open_alert
+from claim_check import newest_log_seq, build_check_result, failed_result
 from logger_s import get_logger
 
 router = APIRouter()
@@ -110,6 +112,7 @@ def handoff_keys(handoff_id: str) -> dict:
         "resume": base + ":resume",     # step 2: secret that proves "I am the winner"
         # step 4: when Accept happened (seconds)
         "accepted_at": base + ":accepted_at",
+        "cutoff": base + ":cutoff",     # newest call-log line number at Accept
         # step 4: transcript lines, one JSON line each. my-agent writes it.
         "transcript": base + ":transcript",
     }
@@ -184,12 +187,40 @@ async def read_elapsed_seconds(handoff_id: str) -> Optional[int]:
         return None
 
 
-async def read_transcript(handoff_id: str) -> list:
-    """The most recent transcript lines (a list of objects, oldest first).
-    Any problem gives an empty list, so a missing transcript never stops a resume."""
+async def save_cutoff(handoff_id: str, room_name: str) -> None:
+    """At Accept, remember the newest line number in the call log. Only AI lines
+    up to it are checked, so the handover line (played after the human joins)
+    is left out. Never raises."""
+    try:
+        newest = await newest_log_seq(room_name)
+        await redis.set(
+            handoff_keys(handoff_id)["cutoff"], str(newest), ex=CALL_MAX_SECONDS)
+    except Exception as error:
+        logger.error(
+            f"Handoff {handoff_id[:8]}: cut-off not saved: {type(error).__name__}")
+
+
+async def read_check(handoff_id: str, room_name: str) -> dict:
+    """The score box for the dashboard. Never raises. A missing cut-off or any
+    problem gives the red 'failed' result."""
+    try:
+        raw = to_text(await redis.get(handoff_keys(handoff_id)["cutoff"]))
+        if raw is None:
+            return failed_result()
+        elapsed = await read_elapsed_seconds(handoff_id)
+        return await build_check_result(room_name, int(raw), elapsed)
+    except Exception as error:
+        logger.error(
+            f"Handoff {handoff_id[:8]}: check not read: {type(error).__name__}")
+        return failed_result()
+
+
+async def read_transcript(room_name: str) -> list:
+    """The most recent call lines (oldest first), read from the log my-agent
+    writes (call:{room_name}:log). Any problem gives an empty list."""
     try:
         raw_lines = await redis.lrange(
-            handoff_keys(handoff_id)["transcript"], -TRANSCRIPT_MAX_LINES, -1)
+            "call:{" + room_name + "}:log", -TRANSCRIPT_MAX_LINES, -1)
         lines = []
         for item in raw_lines or []:
             if isinstance(item, (str, bytes)):
@@ -201,8 +232,7 @@ async def read_transcript(handoff_id: str) -> list:
                 lines.append(item)
         return lines
     except Exception as error:
-        logger.error(
-            f"Handoff {handoff_id[:8]}: transcript not read: {type(error).__name__}")
+        logger.error(f"Call log not read: {type(error).__name__}")
         return []
 
 
@@ -265,6 +295,7 @@ async def start_call_access(handoff_id: str, connection_id: str) -> Optional[dic
             handoff_keys(handoff_id)["resume"], resume_secret,
             ex=CALL_MAX_SECONDS)
         await save_accept_time(handoff_id)
+        await save_cutoff(handoff_id, room_name)
 
         room_token = make_room_pass(
             room_name, human_identity(handoff_id), CALL_MAX_SECONDS)
@@ -276,6 +307,7 @@ async def start_call_access(handoff_id: str, connection_id: str) -> Optional[dic
             "expires_in": CALL_MAX_SECONDS,
         }
         access.update(await call_state_fields(handoff_id, card))
+        access["ragas"] = await read_check(handoff_id, room_name)
         return access
     except Exception as error:
         logger.error(
@@ -323,6 +355,7 @@ async def resume_call(handoff_id: str, connection_id: str,
             "expires_in": remaining,
         }
         access.update(await call_state_fields(handoff_id, card))
+        access["ragas"] = await read_check(handoff_id, room_name)
         access["transcript"] = await read_transcript(handoff_id)
         return access
     except Exception as error:
@@ -404,7 +437,7 @@ async def send_alert(connection_id: str, websocket, alert: dict) -> bool:
 class HandoffRequest(BaseModel):
     room_name: str = Field(min_length=1, max_length=100)
     # The AI's summary of the call. If the order ID is known, it is IN the summary.
-    summary: str = Field(default="", max_length=4000)
+    summary: str = Field(default="")
 
 
 @router.post("/agent/handoff")
