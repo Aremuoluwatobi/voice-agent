@@ -301,7 +301,7 @@ function handleServerMessage(message) {
       hideIncomingCall();
       showView("call");
       showHandoff(handoffFields(message));
-      startCallTimer(typeof message.elapsed_seconds === "number" ? message.elapsed_seconds : 0);
+      startTimer(typeof message.elapsed_seconds === "number" ? message.elapsed_seconds : 0);
       if (typeof message.resume_secret === "string" && message.resume_secret) {
         saveCall(handoffId, message.resume_secret);
       }
