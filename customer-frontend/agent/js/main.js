@@ -33,7 +33,7 @@ import {
 } from "./Call-room.js";
 
 import { initHelper, clearHelper } from "./call-helper.js";
-import { startTimer, stopTimer } from "./call-timer.js";
+import { startCallTimer, stopCallTimer } from "./call-timer.js";
 
 
 // ---------- Sound (ring + "Click to enable sound" button) ----------
@@ -245,7 +245,7 @@ function resumeSavedCall() {
 function dropCallLocally() {
   leaveRoom(); // async, nobody needs to wait for it
   clearSavedCall();
-  stopTimer();
+  stopCallTimer();
   showAudioButton(false);
   showCallNotice("");
 }
@@ -301,7 +301,7 @@ function handleServerMessage(message) {
       hideIncomingCall();
       showView("call");
       showHandoff(handoffFields(message));
-      startTimer(typeof message.elapsed_seconds === "number" ? message.elapsed_seconds : 0);
+      startCallTimer(typeof message.elapsed_seconds === "number" ? message.elapsed_seconds : 0);
       if (typeof message.resume_secret === "string" && message.resume_secret) {
         saveCall(handoffId, message.resume_secret);
       }
