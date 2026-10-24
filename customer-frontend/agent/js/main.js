@@ -33,7 +33,7 @@ import {
 } from "./Call-room.js";
 
 import { initHelper, clearHelper } from "./call-helper.js";
-import { startCallTimer, stopCallTimer } from "./call-timer.js";
+import { startTimer, stopTimer } from "./call-timer.js";
 
 
 // ---------- Sound (ring + "Click to enable sound" button) ----------
@@ -245,7 +245,7 @@ function resumeSavedCall() {
 function dropCallLocally() {
   leaveRoom(); // async, nobody needs to wait for it
   clearSavedCall();
-  stopCallTimer();
+  stopTimer();
   showAudioButton(false);
   showCallNotice("");
 }
