@@ -15,7 +15,7 @@ source: knowledge-file
 | Other states + FCT | Abuja, Rivers, Kano, Enugu, etc. | 3–6 working days | ₦5,500 |
 | Pickup (Ikeja) | — | Ready same day if ordered before 12:00 | Free |
 
-But Orders placed before M on a working day are dispatched the same day
+But Orders placed before 10AM on a working day are dispatched the same day
 
 Customers receive a tracking link by SMS and email when the order is dispatched.
 
