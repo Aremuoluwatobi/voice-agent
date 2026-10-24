@@ -1,48 +1,66 @@
-const TIMER_SELECTOR = ".call-timer";
-const START_TEXT = "00:00";
+// /agent/js/call-timer.js
+const TIMER_ID = "call-timer";
+const EMPTY_TEXT = "00:00";
+const UNKNOWN_TEXT = "--:--";
+const MAX_SECONDS = 24 * 60 * 60;   // anything above this is treated as wrong
 
-let intervalId = null;
-let startedAt = 0;
+let tickId = null;     // the running interval, or null
+let startedAt = null;  // browser time (ms) when the call started
 
 function pad(n) {
     return String(n).padStart(2, "0");
 }
 
-export function formatElapsed(totalSeconds) {
-    const s = Math.max(0, Math.floor(totalSeconds));
+// 00:01 ... 59:59, then 1:00:00 (never 61:00)
+function formatClock(total) {
+    const s = Math.floor(total);
     const hours = Math.floor(s / 3600);
     const minutes = Math.floor((s % 3600) / 60);
     const seconds = s % 60;
-    return hours > 0
-        ? `${hours}:${pad(minutes)}:${pad(seconds)}`
-        : `${pad(minutes)}:${pad(seconds)}`;
+    if (hours > 0) return hours + ":" + pad(minutes) + ":" + pad(seconds);
+    return pad(minutes) + ":" + pad(seconds);
 }
 
-function show(text) {
-    for (const el of document.querySelectorAll(TIMER_SELECTOR)) {
-        el.textContent = text;
+function setText(text) {
+    const el = document.getElementById(TIMER_ID);
+    if (el) el.textContent = text;
+}
+
+function draw() {
+    if (startedAt === null) return;
+    const seconds = (Date.now() - startedAt) / 1000;
+    if (!Number.isFinite(seconds) || seconds < 0 || seconds > MAX_SECONDS) {
+        setText(UNKNOWN_TEXT);   // a wrong time is worse than no time
+        return;
     }
+    setText(formatClock(seconds));
 }
 
-function tick() {
-    show(formatElapsed((Date.now() - startedAt) / 1000));
+function validSeconds(value) {
+    return typeof value === "number" && Number.isFinite(value) &&
+        value >= 0 && value <= MAX_SECONDS;
 }
 
-// startTimeMs (optional): a saved start time in milliseconds.
-// Returns the start time used, so main.js can save it for refreshes.
-export function startCallTimer(startTimeMs) {
-    stopCallTimer();                        // never run two timers at once
-    startedAt = Number.isFinite(startTimeMs) ? startTimeMs : Date.now();
-    tick();
-    intervalId = setInterval(tick, 1000);
-    return startedAt;
-}
-
-// Stop and go back to 00:00 (End call, Log out, back to login).
-export function stopCallTimer() {
-    if (intervalId !== null) {
-        clearInterval(intervalId);
-        intervalId = null;
+// Start, or re-sync, from the server's number. If the number is bad and the
+// timer is already running, it keeps running. If it is not running, it shows
+// --:-- instead of a wrong time.
+export function startTimer(elapsedSeconds) {
+    if (validSeconds(elapsedSeconds)) {
+        startedAt = Date.now() - elapsedSeconds * 1000;
+    } else if (startedAt === null) {
+        setText(UNKNOWN_TEXT);
+        return;
     }
-    show(START_TEXT);
+    draw();
+    if (tickId === null) tickId = setInterval(draw, 500);
+}
+
+// End of the call: stop counting and go back to 00:00.
+export function stopTimer() {
+    if (tickId !== null) {
+        clearInterval(tickId);
+        tickId = null;
+    }
+    startedAt = null;
+    setText(EMPTY_TEXT);
 }

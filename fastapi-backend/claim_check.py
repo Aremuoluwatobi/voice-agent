@@ -16,6 +16,7 @@ import urllib.request
 import config as cfg
 from config import redis, CHECK_MODEL, OPEN_ROUTER_API_KEY
 from knowledge import load_knowledge
+import time
 from logger_s import get_logger
 
 logger = get_logger(__name__)
@@ -343,8 +344,11 @@ async def save_verdict(room_name: str, record: dict) -> None:
 async def run_line_check(room_name: str, seq: int) -> None:
     """Judge one AI line and save the verdict. Never raises."""
     record = {"seq": seq, "status": "failed"}
+    began = time.monotonic()
+    found_at = narrowed_at = judged_at = began
     try:
         line, context = await find_line(room_name, seq)
+        found_at = narrowed_at = judged_at = time.monotonic()
         if line is None:
             logger.error(f"Line check {room_name}: line {seq} not found")
         else:
@@ -355,6 +359,7 @@ async def run_line_check(room_name: str, seq: int) -> None:
                 logger.error("Line check not configured: key or model missing")
             else:
                 knowledge_text = pick_knowledge(" ".join(context + [text]))
+                narrowed_at = judged_at = time.monotonic()
                 if not knowledge_text:
                     logger.error("Line check: no knowledge text")
                 else:
@@ -362,6 +367,7 @@ async def run_line_check(room_name: str, seq: int) -> None:
                     async with get_slots():
                         reply = await asyncio.to_thread(
                             ask_judge_blocking, messages)
+                    judged_at = time.monotonic()
                     supported, unsupported = judge_line(reply, text)
                     if supported + len(unsupported) == 0:
                         record = {"seq": seq, "status": "none"}
@@ -380,6 +386,12 @@ async def run_line_check(room_name: str, seq: int) -> None:
         await save_verdict(room_name, record)
     except Exception as error:
         logger.error(f"Verdict not saved: {type(error).__name__}")
+
+    logger.info(
+        f"Line check {seq}: {record['status']}, "
+        f"read {found_at - began:.1f}s, narrow {narrowed_at - found_at:.1f}s, "
+        f"judge {judged_at - narrowed_at:.1f}s, "
+        f"total {time.monotonic() - began:.1f}s")
 
 
 # ---------- Adding the verdicts up (called at Accept and on resume) ----------
