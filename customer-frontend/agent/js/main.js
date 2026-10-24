@@ -269,6 +269,8 @@ if (callAudioButton) {
   });
 }
 
+// ---------- Messages from the server (B4) ----------
+
 // The card fields the server sends with "accepted" and "resumed"
 function handoffFields(message) {
   return {
@@ -278,33 +280,6 @@ function handoffFields(message) {
   };
 }
 
-if (message.type === "accepted") {
-  const current = getCurrentAlert();
-  if (current && current.handoffId === handoffId) {
-    hideIncomingCall();
-    showView("call");
-    showHandoff(handoffFields(message));
-    startTimer(typeof message.elapsed_seconds === "number" ? message.elapsed_seconds : 0);
-    if (typeof message.resume_secret === "string" && message.resume_secret) {
-      saveCall(handoffId, message.resume_secret);
-    }
-    joinCall(message);
-  }
-  return;
-}
-
-if (message.type === "resumed") {
-  const saved = readSavedCall();
-  if (!saved || saved.handoffId !== handoffId) return;
-  if (getCurrentView() !== "call") showView("call");
-  showHandoff(handoffFields(message));
-  startTimer(message.elapsed_seconds);
-  joinCall(message);
-  return;
-}
-
-
-// ---------- Messages from the server (B4) ----------
 function handleServerMessage(message) {
   if (!message || typeof message !== "object") return;
   const handoffId = typeof message.handoff_id === "string" ? message.handoff_id : "";
@@ -325,11 +300,8 @@ function handleServerMessage(message) {
     if (current && current.handoffId === handoffId) {
       hideIncomingCall();
       showView("call");
-      showHandoff({
-        summary: message.summary,
-        suggested_resolution: message.suggested_resolution,
-        ragas: message.ragas,
-      });
+      showHandoff(handoffFields(message));
+      startTimer(typeof message.elapsed_seconds === "number" ? message.elapsed_seconds : 0);
       if (typeof message.resume_secret === "string" && message.resume_secret) {
         saveCall(handoffId, message.resume_secret);
       }
@@ -351,10 +323,8 @@ function handleServerMessage(message) {
     const saved = readSavedCall();
     if (!saved || saved.handoffId !== handoffId) return;
     if (getCurrentView() !== "call") showView("call");
-    showHandoff({
-      summary: message.summary,
-      suggested_resolution: message.suggested_resolution,
-    });
+    showHandoff(handoffFields(message));
+    startTimer(message.elapsed_seconds);
     joinCall(message);
     return;
   }
