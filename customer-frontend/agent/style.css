@@ -1354,3 +1354,35 @@ p {
 #call-ragas-score:empty {
     display: none;
 }
+
+.call-handoff .call-ragas-reason-text {
+    margin: 0;
+    max-height: 4.5em;
+    /* 3 lines, so a long reason never grows the card */
+    overflow: hidden;
+    white-space: pre-line;
+}
+
+.call-handoff .call-ragas-reason-text.is-expanded {
+    max-height: 12em;
+    /* about 8 lines, then it scrolls inside the box */
+    overflow-y: auto;
+}
+
+.call-handoff .call-ragas-toggle {
+    margin: 4px 0 0;
+    padding: 2px 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--navy);
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.call-ragas-reason[hidden],
+.call-ragas-toggle[hidden] {
+    display: none;
+}

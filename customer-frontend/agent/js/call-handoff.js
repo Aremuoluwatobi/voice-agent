@@ -13,8 +13,14 @@ const NOT_CHECKED = "Not checked";
 const REASON_PREFIX = "AI said: ";
 const MAX_SUMMARY = 2000;      // safety cap only; the box scrolls
 const MAX_RESOLUTION = 300;
-const MAX_REASON = 260;
+const MAX_REASON = 600;
 const COLOURS = ["green", "orange", "red", "grey"];
+const RAGAS_REASON_TEXT_ID = "call-ragas-reason-text";
+const RAGAS_TOGGLE_ID = "call-ragas-toggle";
+const SEE_MORE = "See more";
+const SEE_LESS = "See less";
+const SOURCE_PREFIX = "Documents say: ";
+const NOT_FOUND_TEXT = "Not found in the documents that were checked.";
 
 // collapse spaces/new lines, trim, cut very long text with "…"
 function clean(value, max) {
@@ -31,15 +37,52 @@ function setText(id, text, fallback) {
     return true;
 }
 
-// The RAGAS box. The name, colour, words and score are always shown.
-// Text is shown only for orange and red: the AI's exact words that caused it.
-// No result, or an unknown colour, shows grey "Not checked".
+// Show the button only when the collapsed text is really cut off.
+function refreshToggle() {
+    const reason = document.getElementById(RAGAS_REASON_ID);
+    const textEl = document.getElementById(RAGAS_REASON_TEXT_ID);
+    const toggle = document.getElementById(RAGAS_TOGGLE_ID);
+    if (!reason || !textEl || !toggle) return;
+    if (reason.hidden) {
+        toggle.hidden = true;
+        return;
+    }
+    if (textEl.classList.contains("is-expanded")) {
+        toggle.hidden = false;   // keep "See less" available
+        return;
+    }
+    toggle.hidden = !(textEl.scrollHeight > textEl.clientHeight + 1);
+}
+
+// Every new result starts collapsed.
+function collapseReason() {
+    const textEl = document.getElementById(RAGAS_REASON_TEXT_ID);
+    const toggle = document.getElementById(RAGAS_TOGGLE_ID);
+    if (!textEl || !toggle) return;
+    textEl.classList.remove("is-expanded");
+    textEl.scrollTop = 0;
+    toggle.textContent = SEE_MORE;
+    toggle.setAttribute("aria-expanded", "false");
+}
+
+function onToggleClick() {
+    const textEl = document.getElementById(RAGAS_REASON_TEXT_ID);
+    const toggle = document.getElementById(RAGAS_TOGGLE_ID);
+    if (!textEl || !toggle) return;
+    const open = textEl.classList.toggle("is-expanded");
+    toggle.textContent = open ? SEE_LESS : SEE_MORE;
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    if (!open) textEl.scrollTop = 0;
+}
+
+
 function showRagas(ragas) {
     const pill = document.getElementById(RAGAS_PILL_ID);
     const label = document.getElementById(RAGAS_LABEL_ID);
     const score = document.getElementById(RAGAS_SCORE_ID);
     const reason = document.getElementById(RAGAS_REASON_ID);
-    if (!pill || !label || !score || !reason) return false;
+    const reasonText = document.getElementById(RAGAS_REASON_TEXT_ID);
+    if (!pill || !label || !score || !reason || !reasonText) return false;
 
     const data = ragas && typeof ragas === "object" ? ragas : {};
     const known = COLOURS.includes(data.colour);
@@ -54,23 +97,49 @@ function showRagas(ragas) {
 
     let text = "";
     if (colour === "orange" || colour === "red") {
+        const parts = [];
         const line = clean(data.line, MAX_REASON);
-        text = line ? REASON_PREFIX + line : clean(data.note, MAX_REASON);
+        if (line) parts.push(REASON_PREFIX + line);
+
+        const source = clean(data.source, MAX_REASON);
+        if (source) {
+            const file = clean(data.source_file, 60);
+            parts.push(SOURCE_PREFIX + source + (file ? " (" + file + ")" : ""));
+        } else if (data.not_in_docs === true) {
+            parts.push(NOT_FOUND_TEXT);
+        }
+
+        const more = Number.isInteger(data.more) ? data.more : 0;
+        if (more > 0) parts.push("+" + more + " more flagged.");
+
+        text = parts.join("\n") || clean(data.note, MAX_REASON);
         const pending = Number.isInteger(data.pending) ? data.pending : 0;
         if (pending > 0) {
-            text = (text + " " + pending + " more still being checked.").trim();
+            text = (text + "\n" + pending + " more still being checked.").trim();
         }
     }
     reason.dataset.colour = colour;
-    reason.textContent = text;
+    reasonText.textContent = text;
     reason.hidden = !text;
+    collapseReason();
+    refreshToggle();
     return true;
 }
+
+let toggleReady = false;
 
 // Call once (from main.js) after the page loads.
 export function initHandoff() {
     if (!document.getElementById(SUMMARY_ID)) return false;
     if (!document.getElementById(RESOLUTION_ID)) return false;
+    if (!toggleReady) {
+        const toggle = document.getElementById(RAGAS_TOGGLE_ID);
+        if (toggle) {
+            toggle.addEventListener("click", onToggleClick);
+            window.addEventListener("resize", refreshToggle);   // text wraps differently
+            toggleReady = true;
+        }
+    }
     clearHandoff();
     return true;
 }

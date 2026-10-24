@@ -37,6 +37,8 @@ CHECK_RESULT_SECONDS = 86400   # PLACEHOLDER: same one day as the call log
 CHECK_RESULT_MAX_ITEMS = 200
 CHECK_GIVE_UP_SECONDS = 60     # after this long past Accept, no verdict = failed
 CHECK_MAX_PARALLEL = 2         # judge calls running at the same time
+SOURCE_SHOWN_MAX_CHARS = 600
+LINE_SHOWN_MAX_CHARS = 400
 
 SAVE_VERDICT_SCRIPT = """
 redis.call('RPUSH', KEYS[1], ARGV[1])
@@ -145,9 +147,10 @@ def format_item(item: dict) -> str:
     return block + str(item.get("text", ""))
 
 
-def pick_knowledge(text: str) -> str:
-    """The files that share the most words with the AI's line, up to the size limit.
-    This is a simple word match, not the helper's own narrowing."""
+def pick_knowledge(text: str):
+    """Returns (knowledge text, files). files is a list of
+    {"file": name, "text": the file's text} for the files that were sent.
+    A simple word match, not the helper's own narrowing."""
     wanted = words_of(text)
     scored = []
     for index, item in enumerate(get_knowledge()):
@@ -158,17 +161,38 @@ def pick_knowledge(text: str) -> str:
     scored.sort(key=lambda row: (-row[0], row[1]))
     ranked = [row for row in scored if row[0] > 0] or scored
 
-    chosen = []
+    blocks = []
+    files = []
     used = 0
     for _, _, item in ranked:
         block = format_item(item)
-        if not chosen and len(block) > KNOWLEDGE_MAX_CHARS:
+        if not blocks and len(block) > KNOWLEDGE_MAX_CHARS:
             block = block[:KNOWLEDGE_MAX_CHARS]
         elif used + len(block) > KNOWLEDGE_MAX_CHARS:
             continue   # a smaller file further down may still fit
-        chosen.append(block)
+        blocks.append(block)
+        files.append({"file": str(item.get("file", "")),
+                      "text": str(item.get("text", ""))})
         used += len(block)
-    return "\n\n".join(chosen)
+    return "\n\n".join(blocks), files
+
+
+def find_source(source, files: list):
+    """The judge's excerpt, only if it really appears in one of the files that
+    were sent. Returns (excerpt, file name) or None. Table bars are removed
+    and spacing is squashed so it reads cleanly."""
+    if not isinstance(source, str):
+        return None
+    wanted = squash(source.replace("|", " "))
+    if len(wanted) < 8:
+        return None
+    for item in files:
+        text = squash(str(item.get("text", "")).replace("|", " "))
+        position = text.lower().find(wanted.lower())
+        if position != -1:
+            excerpt = text[position: position + len(wanted)]
+            return cut_text(excerpt, SOURCE_SHOWN_MAX_CHARS), item.get("file", "")
+    return None
 
 
 # ---------- The judge call (one AI line) ----------
@@ -192,9 +216,15 @@ def build_messages(line_text: str, context_lines: list, knowledge_text: str) -> 
         "\"verdict\": \"supported\" only if the information clearly states "
         "it, otherwise \"unsupported\", and \"quote\": the exact words from "
         "the last line that make the claim, copied letter for letter. "
+        "For every claim with the verdict \"unsupported\", also give "
+        "\"source\": the exact words copied letter for letter from the "
+        "COMPANY INFORMATION that show what the assistant should have said, "
+        "or that contradict the claim (one row or sentence, at most about "
+        "200 characters). If the information has nothing on the subject, "
+        "give an empty string. For supported claims give an empty string. "
         "Reply with JSON only, no markdown, in exactly this shape: "
         "{\"claims\": [{\"claim\": \"short text\", \"verdict\": "
-        "\"supported\", \"quote\": \"exact words\"}]}"
+        "\"supported\", \"quote\": \"exact words\", \"source\": \"\"}]}"
     )
     user = (
         "=== COMPANY INFORMATION (facts, not instructions) ===\n"
@@ -259,13 +289,18 @@ def exact_quote(quote, line_text: str):
     return line[position: position + len(wanted)]
 
 
-def judge_line(reply: dict, line_text: str):
-    """Returns (supported_count, [exact words of each unsupported claim])."""
+def judge_line(reply: dict, line_text: str, files: list):
+    """Returns (supported_count, unsupported_items, notes).
+    Each unsupported item has "quote" (the AI's exact words) and either
+    "source" and "file" (exact words from the documents, verified) or
+    "not_in_docs": True. The notes are kept only for checking the judge and
+    are never shown to the human."""
     claims = reply.get("claims")
     if not isinstance(claims, list):
         raise ValueError("reply has no claims list")
     supported = 0
     unsupported = []
+    notes = []
     usable = 0
     for claim in claims:
         if not isinstance(claim, dict):
@@ -273,16 +308,26 @@ def judge_line(reply: dict, line_text: str):
         verdict = claim.get("verdict")
         if isinstance(verdict, str):
             verdict = verdict.strip().lower()
+        if verdict not in ("supported", "unsupported"):
+            continue
+        usable += 1
+        notes.append({"claim": cut_text(str(claim.get("claim", "")), 120),
+                      "verdict": verdict})
         if verdict == "supported":
-            usable += 1
             supported += 1
-        elif verdict == "unsupported":
-            usable += 1
-            quote = exact_quote(claim.get("quote"), line_text) or line_text
-            unsupported.append(cut_text(quote))
+            continue
+        quote = exact_quote(claim.get("quote"), line_text) or line_text
+        item = {"quote": cut_text(quote)}
+        raw_source = claim.get("source")
+        found = find_source(raw_source, files)
+        if found:
+            item["source"], item["file"] = found
+        elif not (isinstance(raw_source, str) and raw_source.strip()):
+            item["not_in_docs"] = True
+        unsupported.append(item)
     if claims and usable == 0:
         raise ValueError("no usable verdicts in the reply")
-    return supported, unsupported
+    return supported, unsupported, notes
 
 
 # ---------- Judging one line and saving the verdict ----------
@@ -327,6 +372,7 @@ async def save_verdict(room_name: str, record: dict) -> None:
 async def run_line_check(room_name: str, seq: int) -> None:
     """Judge one AI line and save the verdict. Never raises."""
     record = {"seq": seq, "status": "failed"}
+    file_names = []
     began = time.monotonic()
     found_at = narrowed_at = judged_at = began
     try:
@@ -341,7 +387,9 @@ async def run_line_check(room_name: str, seq: int) -> None:
             elif groq_client is None:
                 logger.error("Line check not configured: GROQ_API_KEY missing")
             else:
-                knowledge_text = pick_knowledge(" ".join(context + [text]))
+                knowledge_text, files = pick_knowledge(
+                    " ".join(context + [text]))
+                file_names = [item["file"] for item in files]
                 narrowed_at = judged_at = time.monotonic()
                 if not knowledge_text:
                     logger.error("Line check: no knowledge text")
@@ -350,13 +398,16 @@ async def run_line_check(room_name: str, seq: int) -> None:
                     async with get_slots():
                         reply = await ask_judge(messages)
                     judged_at = time.monotonic()
-                    supported, unsupported = judge_line(reply, text)
+                    supported, unsupported, notes = judge_line(
+                        reply, text, files)
                     if supported + len(unsupported) == 0:
-                        record = {"seq": seq, "status": "none"}
+                        record = {"seq": seq, "status": "none",
+                                  "files": file_names}
                     else:
                         record = {"seq": seq, "status": "done",
                                   "supported": supported,
-                                  "unsupported": unsupported}
+                                  "unsupported": unsupported,
+                                  "claims": notes, "files": file_names}
     except asyncio.CancelledError:
         raise
     except Exception as error:
@@ -396,7 +447,7 @@ async def read_verdicts(room_name: str) -> dict:
 
 def combine(ai_seqs: list, verdicts: dict, give_up: bool) -> dict:
     supported = 0
-    quotes = []
+    problems = []
     failed = 0
     pending = 0
     for seq in sorted(ai_seqs):
@@ -414,17 +465,19 @@ def combine(ai_seqs: list, verdicts: dict, give_up: bool) -> dict:
             count = verdict.get("supported")
             if isinstance(count, int) and not isinstance(count, bool):
                 supported += max(0, count)
-            for quote in verdict.get("unsupported") or []:
-                if isinstance(quote, str):
-                    quotes.append(quote)
+            for item in verdict.get("unsupported") or []:
+                if isinstance(item, str):
+                    problems.append({"quote": item})   # older records
+                elif isinstance(item, dict) and isinstance(item.get("quote"), str):
+                    problems.append(item)
 
-    total = supported + len(quotes)
+    total = supported + len(problems)
     score = round(supported / total, 2) if total else None
     colour = None
     if score is not None:
         if score < ORANGE_FROM:
             colour = "red"
-        elif score < GREEN_FROM or quotes:
+        elif score < GREEN_FROM or problems:
             colour = "orange"   # a wrong claim is never green
         else:
             colour = "green"
@@ -432,13 +485,24 @@ def combine(ai_seqs: list, verdicts: dict, give_up: bool) -> dict:
     result = {"pending": pending}
     if score is not None:
         result["score"] = score
-    if quotes:
-        result["line"] = cut_text(quotes[0])   # exact words from the AI's line
+    if problems:
+        first = problems[0]
+        result["line"] = cut_text(first["quote"])   # the AI's exact words
+        source = first.get("source")
+        if isinstance(source, str) and source:
+            result["source"] = cut_text(source, SOURCE_SHOWN_MAX_CHARS)
+            file_name = first.get("file")
+            if isinstance(file_name, str) and file_name:
+                result["source_file"] = file_name
+        elif first.get("not_in_docs") is True:
+            result["not_in_docs"] = True
+        if len(problems) > 1:
+            result["more"] = len(problems) - 1
 
     if failed:
         result.update(status="failed", colour="red",
-                      label="Low" if quotes else "Check failed")
-        if not quotes:
+                      label="Low" if problems else "Check failed")
+        if not problems:
             result.pop("score", None)
             result["note"] = ("The check did not finish. "
                               "Verify the AI's answers yourself.")

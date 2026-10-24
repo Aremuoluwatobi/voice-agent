@@ -190,7 +190,11 @@
                 <h2 class="call-subtitle">Customer handoff</h2>
                 <div id="call-summary" class="call-scroll call-summary" tabindex="0" aria-label="Customer summary">No
                     summary yet</div>
-                <p id="call-ragas-reason" class="call-ragas-reason" data-colour="grey" hidden aria-live="polite"></p>
+                <div id="call-ragas-reason" class="call-ragas-reason" data-colour="grey" hidden aria-live="polite">
+                    <p id="call-ragas-reason-text" class="call-ragas-reason-text"></p>
+                    <button type="button" id="call-ragas-toggle" class="call-ragas-toggle" aria-expanded="false"
+                        aria-controls="call-ragas-reason-text" hidden>See more</button>
+                </div>
             </div>
 
             <!-- 2. The three panels -->
