@@ -54,14 +54,13 @@ function refreshToggle() {
     toggle.hidden = !(textEl.scrollHeight > textEl.clientHeight + 1);
 }
 
-// Every new result starts collapsed.
 function collapseReason() {
     const textEl = document.getElementById(RAGAS_REASON_TEXT_ID);
     const toggle = document.getElementById(RAGAS_TOGGLE_ID);
     if (!textEl || !toggle) return;
     textEl.classList.remove("is-expanded");
     textEl.scrollTop = 0;
-    toggle.textContent = SEE_MORE;
+    toggle.textContent = collapsedLabel(textEl);
     toggle.setAttribute("aria-expanded", "false");
 }
 
@@ -70,12 +69,32 @@ function onToggleClick() {
     const toggle = document.getElementById(RAGAS_TOGGLE_ID);
     if (!textEl || !toggle) return;
     const open = textEl.classList.toggle("is-expanded");
-    toggle.textContent = open ? SEE_LESS : SEE_MORE;
+    toggle.textContent = open ? SEE_LESS : collapsedLabel(textEl);
     toggle.setAttribute("aria-expanded", open ? "true" : "false");
     if (!open) textEl.scrollTop = 0;
 }
 
 
+// One flagged claim as text: what the AI said, and what the documents say.
+function describeFlag(item) {
+    const lines = [];
+    const said = clean(item.line, MAX_REASON);
+    if (said) lines.push(REASON_PREFIX + said);
+    const source = clean(item.source, MAX_REASON);
+    if (source) {
+        const file = clean(item.source_file, 60);
+        lines.push(SOURCE_PREFIX + source + (file ? " (" + file + ")" : ""));
+    } else if (item.not_in_docs === true) {
+        lines.push(NOT_FOUND_TEXT);
+    }
+    return lines.join("\n");
+}
+
+// The button's words when the box is collapsed.
+function collapsedLabel(textEl) {
+    const flagged = Number(textEl.dataset.flagged) || 0;
+    return flagged > 1 ? "See all " + flagged + " flagged" : SEE_MORE;
+}
 function showRagas(ragas) {
     const pill = document.getElementById(RAGAS_PILL_ID);
     const label = document.getElementById(RAGAS_LABEL_ID);
@@ -96,29 +115,27 @@ function showRagas(ragas) {
     score.textContent = hasScore ? data.score.toFixed(2) : "";
 
     let text = "";
+    let flagged = 0;
     if (colour === "orange" || colour === "red") {
-        const parts = [];
-        const line = clean(data.line, MAX_REASON);
-        if (line) parts.push(REASON_PREFIX + line);
-
-        const source = clean(data.source, MAX_REASON);
-        if (source) {
-            const file = clean(data.source_file, 60);
-            parts.push(SOURCE_PREFIX + source + (file ? " (" + file + ")" : ""));
-        } else if (data.not_in_docs === true) {
-            parts.push(NOT_FOUND_TEXT);
+        const blocks = [];
+        const first = describeFlag(data);
+        if (first) blocks.push(first);
+        const others = Array.isArray(data.others) ? data.others : [];
+        for (const item of others) {
+            if (!item || typeof item !== "object") continue;
+            const block = describeFlag(item);
+            if (block) blocks.push(block);
         }
+        flagged = blocks.length;
 
-        const more = Number.isInteger(data.more) ? data.more : 0;
-        if (more > 0) parts.push("+" + more + " more flagged.");
-
-        text = parts.join("\n") || clean(data.note, MAX_REASON);
+        text = blocks.join("\n\n") || clean(data.note, MAX_REASON);
         const pending = Number.isInteger(data.pending) ? data.pending : 0;
         if (pending > 0) {
-            text = (text + "\n" + pending + " more still being checked.").trim();
+            text = (text + "\n\n" + pending + " more still being checked.").trim();
         }
     }
     reason.dataset.colour = colour;
+    reasonText.dataset.flagged = String(flagged);
     reasonText.textContent = text;
     reason.hidden = !text;
     collapseReason();

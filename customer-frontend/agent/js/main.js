@@ -431,9 +431,14 @@ async function checkSession() {
   }
 
 
-  const hasSavedCall = Boolean(readSavedCall());
+  const savedCall = readSavedCall();
+  const hasSavedCall = Boolean(savedCall);
   showView(hasSavedCall ? "call" : "waiting");
-  if (hasSavedCall) showCallNotice("Rejoining your call…");
+  if (hasSavedCall) {
+    showCallNotice("Rejoining your call…");
+    // keeps counting while the socket reconnects; shows --:-- if nothing was saved
+    startTimer(undefined, savedCall.handoffId);
+  }
   setAgentStatus("Connecting…", "checking");
   refreshSoundButton();
   clearDeclinedCalls();

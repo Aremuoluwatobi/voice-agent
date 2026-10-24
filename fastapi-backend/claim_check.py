@@ -445,6 +445,20 @@ async def read_verdicts(room_name: str) -> dict:
     return by_seq
 
 
+def problem_entry(item: dict) -> dict:
+    """What the dashboard shows for one flagged claim."""
+    entry = {"line": cut_text(item["quote"])}   # the AI's exact words
+    source = item.get("source")
+    if isinstance(source, str) and source:
+        entry["source"] = cut_text(source, SOURCE_SHOWN_MAX_CHARS)
+        file_name = item.get("file")
+        if isinstance(file_name, str) and file_name:
+            entry["source_file"] = file_name
+    elif item.get("not_in_docs") is True:
+        entry["not_in_docs"] = True
+    return entry
+
+
 def combine(ai_seqs: list, verdicts: dict, give_up: bool) -> dict:
     supported = 0
     problems = []
@@ -485,19 +499,12 @@ def combine(ai_seqs: list, verdicts: dict, give_up: bool) -> dict:
     result = {"pending": pending}
     if score is not None:
         result["score"] = score
-    if problems:
-        first = problems[0]
-        result["line"] = cut_text(first["quote"])   # the AI's exact words
-        source = first.get("source")
-        if isinstance(source, str) and source:
-            result["source"] = cut_text(source, SOURCE_SHOWN_MAX_CHARS)
-            file_name = first.get("file")
-            if isinstance(file_name, str) and file_name:
-                result["source_file"] = file_name
-        elif first.get("not_in_docs") is True:
-            result["not_in_docs"] = True
-        if len(problems) > 1:
-            result["more"] = len(problems) - 1
+        if problems:
+            # the first flagged claim
+            result.update(problem_entry(problems[0]))
+            others = [problem_entry(item) for item in problems[1:]]
+        if others:
+            result["others"] = others               # every other flagged claim
 
     if failed:
         result.update(status="failed", colour="red",
