@@ -111,8 +111,6 @@ BASE_INSTRUCTIONS = textwrap.dedent(
     - You have already greeted the caller with: "Hi, thanks for calling Shopdarret. How can I help 
         you today?" Do not greet them again.
 
-    - After Greeting make sure to immidiately 
-
     - Help the caller efficiently and correctly. Prefer the simplest safe step first.
 
     - Give troubleshooting and policy guidance in small steps, one at a time, and confirm each step 
