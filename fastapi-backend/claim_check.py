@@ -656,5 +656,6 @@ async def build_check_result(room_name: str, cutoff: int, elapsed_seconds) -> di
     except asyncio.CancelledError:
         raise
     except Exception as error:
-        logger.error(f"Check result not built: {type(error).__name__}")
+        logger.error(
+            f"Check result not built: {type(error).__name__}: {str(error)[:200]}")
         return failed_result()
