@@ -2,7 +2,7 @@ import asyncio
 import json
 import re
 import time
-
+import math
 from groq import AsyncGroq
 
 import config as cfg
@@ -54,6 +54,16 @@ _STOPWORDS = {
     "there", "they", "them", "here", "please", "thank", "thanks", "hello",
     "sure", "okay",
 }
+
+_UNITS = {
+    "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+    "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11,
+    "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15,
+    "sixteen": 16, "seventeen": 17, "eighteen": 18, "nineteen": 19,
+}
+_TENS = {"twenty": 20, "thirty": 30, "forty": 40, "fifty": 50,
+         "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90}
+_SCALES = {"thousand": 1000, "million": 1000000}
 
 
 def verdict_key(room_name: str) -> str:
@@ -134,9 +144,70 @@ def get_knowledge() -> list:
     return _knowledge_cache
 
 
+# Words the AI says that the documents say differently. Add more here when a
+# false flag shows a gap. Only this pair is known from your delivery file.
+SYNONYMS = {
+    "shipping": "delivery",
+    "ship": "delivery",
+    "shipped": "delivery",
+    "shipment": "delivery",
+}
+
+
+def spoken_numbers_to_digits(text: str) -> str:
+    """Only used to choose files: 'two thousand five hundred' becomes '2500'.
+    The text sent to the judge is never changed."""
+    out = []
+    state = {"total": 0, "current": 0, "active": False, "and": False}
+
+    def flush():
+        if state["active"]:
+            out.append(str(state["total"] + state["current"]))
+        state.update(total=0, current=0, active=False)
+
+    for token in re.split(r"[\s\-]+", text.lower()):
+        word = token.strip(".,;:!?()\"'")
+        if not word:
+            continue
+        if word in _UNITS or word in _TENS:
+            state["current"] += _UNITS.get(word, _TENS.get(word, 0))
+            state["active"] = True
+            state["and"] = False
+        elif word == "hundred" and state["active"]:
+            state["current"] = (state["current"] or 1) * 100
+            state["and"] = False
+        elif word in _SCALES and state["active"]:
+            state["total"] += (state["current"] or 1) * _SCALES[word]
+            state["current"] = 0
+            state["and"] = False
+        elif word == "and" and state["active"]:
+            state["and"] = True      # "two hundred and fifty"
+        else:
+            had_and = state["and"]
+            flush()
+            state["and"] = False
+            if had_and:
+                out.append("and")
+            out.append(token)
+    had_and = state["and"]
+    flush()
+    if had_and:
+        out.append("and")
+    return " ".join(out)
+
+
 def words_of(text: str) -> set:
+    """The words used to match a line with the files. Spoken numbers become
+    digits, 2,500 becomes 2500, and shipping also counts as delivery."""
+    text = spoken_numbers_to_digits(text)
+    text = re.sub(r"(?<=\d),(?=\d{3}\b)", "", text)
     found = re.findall(r"[a-z0-9]+", text.lower())
-    return {word for word in found if len(word) >= 3 and word not in _STOPWORDS}
+    words = {word for word in found
+             if len(word) >= 3 and word not in _STOPWORDS}
+    for word in list(words):
+        if word in SYNONYMS:
+            words.add(SYNONYMS[word])
+    return words
 
 
 def format_item(item: dict) -> str:
@@ -147,18 +218,52 @@ def format_item(item: dict) -> str:
     return block + str(item.get("text", ""))
 
 
+_index_cache = None
+
+
+def get_index():
+    """Built once: each file's words, the words in its name and title, and
+    how many files each word is in."""
+    global _index_cache
+    if _index_cache is None:
+        items = get_knowledge()
+        haystacks = [
+            words_of(" ".join([str(item.get("title", "")),
+                               str(item.get("file", "")),
+                               str(item.get("text", ""))]))
+            for item in items]
+        labels = [
+            words_of(str(item.get("title", "")) +
+                     " " + str(item.get("file", "")))
+            for item in items]
+        doc_freq = {}
+        for hay in haystacks:
+            for word in hay:
+                doc_freq[word] = doc_freq.get(word, 0) + 1
+        _index_cache = (items, haystacks, labels, doc_freq)
+    return _index_cache
+
+
 def pick_knowledge(text: str):
     """Returns (knowledge text, files). files is a list of
     {"file": name, "text": the file's text} for the files that were sent.
-    A simple word match, not the helper's own narrowing."""
+    Rare words count more than common ones, and a word in a file's name or
+    title counts extra. A simple match, not the helper's own narrowing."""
+    items, haystacks, labels, doc_freq = get_index()
     wanted = words_of(text)
+    total = max(1, len(items))
     scored = []
-    for index, item in enumerate(get_knowledge()):
-        haystack = words_of(" ".join([
-            str(item.get("title", "")), str(item.get("file", "")),
-            str(item.get("text", ""))]))
-        scored.append((len(wanted & haystack), index, item))
+    for index, item in enumerate(items):
+        shared = wanted & haystacks[index]
+        score = sum(math.log(1 + total / doc_freq[word]) for word in shared)
+        score += 2.0 * len(wanted & labels[index])
+        scored.append((score, index, item))
     scored.sort(key=lambda row: (-row[0], row[1]))
+
+    # TEMPORARY: shows why a file was picked or missed. Remove later.
+    logger.info("File scores: " + ", ".join(
+        f"{item.get('file')}={score:.1f}" for score, _, item in scored[:4]))
+
     ranked = [row for row in scored if row[0] > 0] or scored
 
     blocks = []
@@ -208,19 +313,27 @@ def build_messages(line_text: str, context_lines: list, knowledge_text: str) -> 
         "to understand what it refers to; do not judge them. List every "
         "factual claim the last line makes about Shopdarret: prices, "
         "products, stock, delivery, returns, refunds, warranty, policies, "
-        "or what the assistant can or cannot do. Greetings, questions, "
-        "polite phrases and sentences about connecting the caller to a "
-        "colleague contain no claims, so give an empty list. Numbers may be "
-        "written in words (for example fifty-two thousand naira); compare "
-        "them with the numbers in the information. For each claim give "
-        "\"verdict\": \"supported\" only if the information clearly states "
-        "it, otherwise \"unsupported\", and \"quote\": the exact words from "
-        "the last line that make the claim, copied letter for letter. "
+        "or what the assistant can or cannot do for the customer, such as "
+        "processing a refund. These contain no claims, so give an empty "
+        "list for them: greetings, questions, polite phrases, agreeing to a "
+        "request (for example \"I can do that for you\"), and sentences "
+        "about what the assistant will do next, such as getting a "
+        "colleague, connecting or transferring the caller, or asking them "
+        "to wait. Numbers may be written in words (for example fifty-two "
+        "thousand naira); compare them with the numbers in the information. "
+        "For each claim give \"verdict\": \"supported\" if the information "
+        "states the claim or clearly implies it. Give \"unsupported\" only "
+        "if the information contradicts the claim, or the claim gives a "
+        "specific fact (a price, number, time, policy or promise) that the "
+        "information does not contain. Do not list vague statements that "
+        "carry no specific fact. For each claim also give \"quote\": the "
+        "exact words from the last line that make the claim, copied letter "
+        "for letter. "
         "For every claim with the verdict \"unsupported\", also give "
         "\"source\": the exact words copied letter for letter from the "
         "COMPANY INFORMATION that show what the assistant should have said, "
         "or that contradict the claim (one row or sentence, at most about "
-        "200 characters). If the information has nothing on the subject, "
+        "400 characters). If the information has nothing on the subject, "
         "give an empty string. For supported claims give an empty string. "
         "Reply with JSON only, no markdown, in exactly this shape: "
         "{\"claims\": [{\"claim\": \"short text\", \"verdict\": "
@@ -312,7 +425,8 @@ def judge_line(reply: dict, line_text: str, files: list):
             continue
         usable += 1
         notes.append({"claim": cut_text(str(claim.get("claim", "")), 120),
-                      "verdict": verdict})
+                      "verdict": verdict,
+                      "source": cut_text(str(claim.get("source") or ""), 150)})
         if verdict == "supported":
             supported += 1
             continue
@@ -322,7 +436,7 @@ def judge_line(reply: dict, line_text: str, files: list):
         found = find_source(raw_source, files)
         if found:
             item["source"], item["file"] = found
-        elif not (isinstance(raw_source, str) and raw_source.strip()):
+        elif isinstance(raw_source, str) and not raw_source.strip():
             item["not_in_docs"] = True
         unsupported.append(item)
     if claims and usable == 0:
@@ -387,8 +501,7 @@ async def run_line_check(room_name: str, seq: int) -> None:
             elif groq_client is None:
                 logger.error("Line check not configured: GROQ_API_KEY missing")
             else:
-                knowledge_text, files = pick_knowledge(
-                    " ".join(context + [text]))
+                knowledge_text, files = pick_knowledge(text)
                 file_names = [item["file"] for item in files]
                 narrowed_at = judged_at = time.monotonic()
                 if not knowledge_text:
@@ -425,7 +538,8 @@ async def run_line_check(room_name: str, seq: int) -> None:
         f"Line check {seq}: {record['status']}, "
         f"read {found_at - began:.1f}s, narrow {narrowed_at - found_at:.1f}s, "
         f"judge {judged_at - narrowed_at:.1f}s, "
-        f"total {time.monotonic() - began:.1f}s")
+        f"total {time.monotonic() - began:.1f}s, "
+        f"files {','.join(file_names)}")
 
 # ---------- Adding the verdicts up (called at Accept and on resume) ----------
 
