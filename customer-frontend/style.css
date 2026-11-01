@@ -443,7 +443,8 @@ h1 {
     margin: 14px 0;
 }
 
-.end-call-btn {
+.end-call-btn,
+.mute-btn {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -459,9 +460,55 @@ h1 {
     cursor: pointer;
 }
 
-.end-call-btn svg {
+.end-call-btn svg,
+.mute-btn svg {
     width: 16px;
     height: 16px;
+}
+
+/* both buttons sit in one red pill, split by a small white line */
+.call-actions {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    background: #e15b5b;
+    /* same colour as End call */
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.call-actions .end-call-btn,
+.call-actions .mute-btn {
+    flex: 1;
+    width: auto;
+    background: transparent;
+    border-radius: 0;
+}
+
+.call-actions .end-call-btn:hover,
+.call-actions .mute-btn:hover {
+    background: rgba(0, 0, 0, 0.08);
+}
+
+.call-actions .end-call-btn:focus-visible,
+.call-actions .mute-btn:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: -5px;
+}
+
+.call-actions-divider {
+    flex: none;
+    align-self: stretch;
+    width: 8px;
+    background: #fff;
+}
+
+.mute-slash {
+    display: none;
+}
+
+.mute-btn[data-muted="true"] .mute-slash {
+    display: inline;
 }
 
 @media (prefers-reduced-motion: reduce) {

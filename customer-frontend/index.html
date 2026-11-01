@@ -94,13 +94,26 @@
       </div>
       <div class="call-card-sub">Call duration</div>
       <div class="call-card-divider"></div>
-      <button class="end-call-btn" id="endCallBtn">
-        <svg viewBox="0 0 24 24" fill="currentColor">
-          <path
-            d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1.1-.2 1.2.4 2.5.6 3.8.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.6.6 3.8.1.4 0 .8-.2 1.1L6.6 10.8Z" />
-        </svg>
-        End call
-      </button>
+      <div class="call-actions">
+        <button class="mute-btn" id="muteBtn" type="button" data-muted="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" aria-hidden="true">
+            <rect x="9" y="3" width="6" height="11" rx="3"></rect>
+            <path d="M5 11a7 7 0 0 0 14 0"></path>
+            <path d="M12 18v3"></path>
+            <line class="mute-slash" x1="4" y1="4" x2="20" y2="20"></line>
+          </svg>
+          <span id="muteLabel">Mute</span>
+        </button>
+        <span class="call-actions-divider" aria-hidden="true"></span>
+        <button class="end-call-btn" id="endCallBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1.1-.2 1.2.4 2.5.6 3.8.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.6 21 3 13.4 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.6.6 3.8.1.4 0 .8-.2 1.1L6.6 10.8Z" />
+          </svg>
+          End call
+        </button>
+      </div>
     </div>
 
   </div>

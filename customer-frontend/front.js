@@ -2,10 +2,13 @@ const callWidget = document.getElementById('callWidget');
 const callFab = document.getElementById('callFab');
 const endCallBtn = document.getElementById('endCallBtn');
 const callTimerEl = document.getElementById('callTimer');
+const muteBtn = document.getElementById('muteBtn');
+const muteLabel = document.getElementById('muteLabel');
 
 let timerInterval = null;
 let callStartTime = null;
 let room = null; // holds the active LiveKit Room instance for this call
+let isMuted = false;
 
 // Adjust this to your real deployed FastAPI backend URL and route name.
 const FASTAPI_TOKEN_URL = 'https://shopdarret.onrender.com/api/token';
@@ -73,16 +76,18 @@ async function connectToCall() {
 
     const { Room } = LivekitClient;
     room = new Room();
-    console.log('Disconnected event fired');
     room.on(LivekitClient.RoomEvent.Disconnected, () => {
         stopTimer();
         document.querySelectorAll('audio[data-livekit]').forEach((el) => el.remove());
         room = null;
+        setMuteUi(false);
+        setCallState('idle');
         setCallState('idle');
     });
     setupAudioPlayback(room);
     await room.connect(livekitUrl, token);
     await room.localParticipant.setMicrophoneEnabled(true);
+    setMuteUi(false);
 }
 
 // Disconnects from the LiveKit room, which is also what triggers the
@@ -92,6 +97,27 @@ async function disconnectFromCall() {
         await room.disconnect();
         document.querySelectorAll('audio[data-livekit]').forEach((el) => el.remove());
         room = null;
+    }
+}
+
+// Mute or unmute the customer's microphone. The call stays connected.
+function setMuteUi(muted) {
+    isMuted = muted;
+    muteBtn.dataset.muted = muted ? 'true' : 'false';
+    muteLabel.textContent = muted ? 'Unmute' : 'Mute';
+}
+
+async function handleToggleMute() {
+    if (!room) return;
+    const nextMuted = !isMuted;
+    muteBtn.disabled = true;           // no double clicks while it changes
+    try {
+        await room.localParticipant.setMicrophoneEnabled(!nextMuted);
+        setMuteUi(nextMuted);
+    } catch (err) {
+        console.error('Could not change the microphone:', err);
+    } finally {
+        muteBtn.disabled = false;
     }
 }
 
@@ -115,8 +141,10 @@ async function handleStartCall() {
 async function handleEndCall() {
     stopTimer();
     await disconnectFromCall();
+    setMuteUi(false);
     setCallState('idle');
 }
 
+muteBtn.addEventListener('click', handleToggleMute);
 callFab.addEventListener('click', handleStartCall);
 endCallBtn.addEventListener('click', handleEndCall);
