@@ -310,6 +310,8 @@ def build_messages(line_text: str, context_lines: list, knowledge_text: str) -> 
     )
     task = (
         "Check ONLY the last assistant line. The earlier lines are context "
+        "Never list a notice that the call is recorded or logged, or any "
+        "other notice about how calls are handled, as a claim. "
         "to understand what it refers to; do not judge them. List every "
         "factual claim the last line makes about Shopdarret: prices, "
         "products, stock, delivery, returns, refunds, warranty, policies, "
