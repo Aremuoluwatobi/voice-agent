@@ -61,7 +61,8 @@ GREETING = "Hi, thanks for calling Shopdarret. How can I help you today?"
 
 HUMAN_DROPPED_GOODBYE = (
     "I am sorry, we lost connection with my colleague. "
-    "A team member will get back to you. Thank you for calling Shopdarret. Goodbye."
+    "Can you please drop your email address so a team member will get back to you. "
+    "Thank you for calling Shopdarret. Goodbye."
 )
 
 HUMAN_JOINED_LINE = (

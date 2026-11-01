@@ -40,10 +40,10 @@ HANDOFF_REQUEST_TIMEOUT_SECONDS = 15
 HUMAN_IDENTITY_PREFIX = "human-"
 
 # After a human leaves, pause this long before checking why (End call vs a drop).
-HUMAN_LEFT_CHECK_SECONDS = 3
+HUMAN_LEFT_CHECK_SECONDS = 1
 
 # A dropped human gets this long to come back before the AI says goodbye.
-HUMAN_DROP_WAIT_SECONDS = 30
+HUMAN_DROP_WAIT_SECONDS = 10
 
 # ---------- Call log and transcript ----------
 # The call log in Redis keeps this many of the newest lines.
